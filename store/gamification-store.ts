@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Achievement, Challenge, Streak } from '@/types';
 import { format } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 
 interface GamificationState {
   points: number;
@@ -16,7 +17,7 @@ interface GamificationState {
   calculateLevel: (points: number) => number;
   
   // Achievement methods
-  unlockAchievement: (id: string) => void;
+  unlockAchievement: (achievement_id: string, user_id: string) => void;
   getUnlockedAchievements: () => Achievement[];
   getLockedAchievements: () => Achievement[];
   
@@ -27,9 +28,13 @@ interface GamificationState {
   getActiveWeeklyChallenges: () => Challenge[];
   
   // Streak methods
-  incrementStreak: (type: keyof Streak) => void;
-  resetStreak: (type: keyof Streak) => void;
+  fetchStreaks: (user_id: string) => Promise<void>;
+  updateStreaks: (streakData: Partial<Streak>) => Promise<void>;
+  incrementStreak: (type: keyof Streak) => Promise<void>;
+  resetStreak: (type: keyof Streak) => Promise<void>;
   updateLoginStreak: () => void;
+  fetchAchievements: (user_id: string) => Promise<void>;
+  fetchChallenges: (user_id: string) => Promise<void>;
 }
 
 // Default achievements
@@ -221,21 +226,18 @@ export const useGamificationStore = create<GamificationState>()(
       },
       
       // Achievement methods
-      unlockAchievement: (id) => {
-        const achievement = get().achievements.find(a => a.id === id);
-        
-        if (achievement && !achievement.isUnlocked) {
+      unlockAchievement: async (achievement_id, user_id) => {
+        try {
+          const { error } = await supabase
+            .from('achievements')
+            .update({ isUnlocked: true, unlockedAt: new Date().toISOString() })
+            .eq('id', achievement_id)
+            .eq('user_id', user_id);
+          if (error) throw error;
           set((state) => ({
-            achievements: state.achievements.map(a => 
-              a.id === id 
-                ? { ...a, isUnlocked: true, unlockedAt: new Date().toISOString() } 
-                : a
-            )
+            achievements: state.achievements.map(a => a.id === achievement_id ? { ...a, isUnlocked: true, unlockedAt: new Date().toISOString() } : a)
           }));
-          
-          // Add points for unlocking achievement
-          get().addPoints(achievement.points);
-        }
+        } catch (e) { /* handle error */ }
       },
       
       getUnlockedAchievements: () => {
@@ -296,33 +298,39 @@ export const useGamificationStore = create<GamificationState>()(
       },
       
       // Streak methods
-      incrementStreak: (type) => {
-        set((state) => ({
-          streaks: {
-            ...state.streaks,
-            [type]: state.streaks[type] + 1
-          }
-        }));
-        
-        // Check for streak achievements
-        const streakValue = get().streaks[type] + 1;
-        
-        if (type === 'weight' && streakValue === 7) {
-          get().unlockAchievement('weight-streak-7');
-        }
-        
-        if (type === 'login' && streakValue === 7) {
-          get().unlockAchievement('login-streak-7');
-        }
+      fetchStreaks: async (user_id) => {
+        try {
+          const { data, error } = await supabase
+            .from('streaks')
+            .select('*')
+            .eq('user_id', user_id)
+            .single();
+          if (error) throw error;
+          if (data) set({ streaks: data });
+        } catch (e) { /* handle error */ }
       },
-      
-      resetStreak: (type) => {
-        set((state) => ({
-          streaks: {
-            ...state.streaks,
-            [type]: 0
-          }
-        }));
+      updateStreaks: async (streakData) => {
+        // Get user_id from user store
+        const user = require('./user-store').useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const res = await supabase
+            .from('streaks')
+            .update({ ...streakData })
+            .eq('user_id', user.id);
+          // Optionally, fetch the updated streaks
+          await get().fetchStreaks(user.id);
+        } catch (e) { /* handle error */ }
+      },
+      incrementStreak: async (type) => {
+        const { streaks } = get();
+        const updated = { ...streaks, [type]: Number(streaks[type] || 0) + 1 };
+        await get().updateStreaks(updated);
+      },
+      resetStreak: async (type) => {
+        const { streaks } = get();
+        const updated = { ...streaks, [type]: 0 };
+        await get().updateStreaks(updated);
       },
       
       updateLoginStreak: () => {
@@ -361,6 +369,26 @@ export const useGamificationStore = create<GamificationState>()(
             }
           }));
         }
+      },
+      fetchAchievements: async (user_id) => {
+        try {
+          const { data, error } = await supabase
+            .from('achievements')
+            .select('*')
+            .eq('user_id', user_id);
+          if (error) throw error;
+          if (data) set({ achievements: data });
+        } catch (e) { /* handle error */ }
+      },
+      fetchChallenges: async (user_id) => {
+        try {
+          const { data, error } = await supabase
+            .from('challenges')
+            .select('*')
+            .eq('user_id', user_id);
+          if (error) throw error;
+          if (data) set({ challenges: data });
+        } catch (e) { /* handle error */ }
       }
     }),
     {

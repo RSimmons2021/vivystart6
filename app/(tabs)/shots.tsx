@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -24,9 +24,9 @@ import {
 } from 'lucide-react-native';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
-import { useHealthStore } from '@/store/health-store';
 import { useThemeStore } from '@/store/theme-store';
 import { useUserStore } from '@/store/user-store';
+import { useHealthStore } from '@/store/health-store';
 import Colors from '@/constants/colors';
 import { SideEffect } from '@/types';
 import { 
@@ -114,6 +114,9 @@ const SEVERITY_LEVELS = [
 ];
 
 export default function ShotsScreen() {
+  const { user, weightUnit } = useUserStore();
+  const { isDarkMode } = useThemeStore();
+  const themeColors = isDarkMode ? Colors.dark : Colors.light;
   const { 
     shots, 
     addShot, 
@@ -122,11 +125,15 @@ export default function ShotsScreen() {
     addWeightLog, 
     sideEffects, 
     addSideEffect, 
-    deleteSideEffect 
+    deleteSideEffect, 
+    setShots, 
+    setWeightLogs, 
+    setSideEffects 
   } = useHealthStore();
-  const { isDarkMode } = useThemeStore();
-  const { weightUnit } = useUserStore();
-  const themeColors = isDarkMode ? Colors.dark : Colors.light;
+
+  // API-backed state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -169,7 +176,21 @@ export default function ShotsScreen() {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
   };
-  
+
+  // Fetch all data for selected month on mount or when user/selectedDate changes
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    setShots([]);
+    setWeightLogs([]);
+    setSideEffects([]);
+    setLoading(false);
+  }, [user?.id]);
+
+  // Add loading and error state for actions
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   // Shot handlers
   const openShotModal = () => {
     setTime('');
@@ -181,50 +202,66 @@ export default function ShotsScreen() {
     setShotModalVisible(true);
   };
   
-  const handleAddShot = () => {
-    const newShot = {
-      id: Date.now().toString(),
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      time,
-      location,
-      notes,
-      medication: selectedMedication.id === 'other' 
-        ? `${customMedication} ${customDosage}`
-        : `${selectedMedication.name} ${selectedMedication.dosage}`
-    };
-    
-    addShot(newShot);
-    setShotModalVisible(false);
+  const handleAddShot = async () => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await addShot({
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        time,
+        location,
+        notes,
+        medication: selectedMedication.id === 'other' 
+          ? `${customMedication} ${customDosage}`
+          : `${selectedMedication.name} ${selectedMedication.dosage}`
+      });
+      setShotModalVisible(false);
+    } catch (e) {
+      setActionError('Failed to add shot.');
+    } finally {
+      setActionLoading(false);
+    }
   };
-  
-  const handleDeleteShot = (id: string) => {
-    deleteShot(id);
+
+  const handleDeleteShot = async (id: string) => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await deleteShot(id);
+    } catch (e) {
+      setActionError('Failed to delete shot.');
+    } finally {
+      setActionLoading(false);
+    }
   };
-  
+
   // Weight handlers
   const openWeightModal = () => {
     setWeight('');
     setWeightModalVisible(true);
   };
   
-  const handleAddWeight = () => {
+  const handleAddWeight = async () => {
     if (!weight || isNaN(parseFloat(weight))) return;
-    
-    // Convert weight to kg if entered in lbs
-    const weightInKg = weightUnit === 'lbs' 
-      ? lbsToKg(parseFloat(weight)) 
-      : parseFloat(weight);
-    
-    const newWeightLog = {
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      weight: weightInKg,
-      notes: ''
-    };
-    
-    addWeightLog(newWeightLog);
-    setWeightModalVisible(false);
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const weightInKg = weightUnit === 'lbs' 
+        ? lbsToKg(parseFloat(weight)) 
+        : parseFloat(weight);
+      await addWeightLog({
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        weight: weightInKg,
+        notes: ''
+      });
+      setWeightModalVisible(false);
+    } catch (e) {
+      setActionError('Failed to add weight log.');
+    } finally {
+      setActionLoading(false);
+    }
   };
-  
+
   // Side effect handlers
   const openSideEffectModal = () => {
     setSelectedSideEffect(COMMON_SIDE_EFFECTS[0]);
@@ -234,26 +271,38 @@ export default function ShotsScreen() {
     setSideEffectModalVisible(true);
   };
   
-  const handleAddSideEffect = () => {
-    const effectName = selectedSideEffect === 'Other' ? customSideEffect : selectedSideEffect;
-    
-    if (!effectName) return;
-    
-    const newSideEffect: Omit<SideEffect, "id"> = {
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      type: effectName,
-      severity: selectedSeverity.id as 'mild' | 'moderate' | 'severe',
-      notes: sideEffectNotes
-    };
-    
-    addSideEffect(newSideEffect);
-    setSideEffectModalVisible(false);
+  const handleAddSideEffect = async () => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const effectName = selectedSideEffect === 'Other' ? customSideEffect : selectedSideEffect;
+      if (!effectName) return;
+      await addSideEffect({
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        type: effectName,
+        severity: selectedSeverity.id as 'mild' | 'moderate' | 'severe',
+        notes: sideEffectNotes
+      });
+      setSideEffectModalVisible(false);
+    } catch (e) {
+      setActionError('Failed to add side effect.');
+    } finally {
+      setActionLoading(false);
+    }
   };
-  
-  const handleDeleteSideEffect = (id: string) => {
-    deleteSideEffect(id);
+
+  const handleDeleteSideEffect = async (id: string) => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await deleteSideEffect(id);
+    } catch (e) {
+      setActionError('Failed to delete side effect.');
+    } finally {
+      setActionLoading(false);
+    }
   };
-  
+
   // Data retrieval functions
   const getShotsForDate = (date: Date) => {
     return shots.filter(shot => {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -10,17 +10,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Trophy } from 'lucide-react-native';
 import { ChallengeCard } from '@/components/ChallengeCard';
-import { useGamificationStore } from '@/store/gamification-store';
 import { useThemeStore } from '@/store/theme-store';
+import { useUserStore } from '@/store/user-store';
+import { useGamificationStore } from '@/store/gamification-store';
 import Colors from '@/constants/colors';
+import type { Challenge } from '@/types';
 
 export default function ChallengesScreen() {
   const router = useRouter();
   const { isDarkMode } = useThemeStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  
-  const { challenges } = useGamificationStore();
-  
+  const { user } = useUserStore();
+  const { challenges, fetchChallenges } = useGamificationStore();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    fetchChallenges(user.id);
+    setLoading(false);
+  }, [user?.id]);
+
   const activeChallenges = challenges.filter(c => !c.isCompleted);
   const completedChallenges = challenges.filter(c => c.isCompleted);
   
@@ -50,32 +62,44 @@ export default function ChallengesScreen() {
           </View>
         </View>
         
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-          Active Challenges
-        </Text>
-        
-        {activeChallenges.length === 0 ? (
+        {loading ? (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No active challenges at the moment
+            Loading challenges...
+          </Text>
+        ) : error ? (
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            {error}
           </Text>
         ) : (
-          activeChallenges.map(challenge => (
-            <ChallengeCard key={challenge.id} challenge={challenge} />
-          ))
-        )}
-        
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-          Completed Challenges
-        </Text>
-        
-        {completedChallenges.length === 0 ? (
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            You haven't completed any challenges yet
-          </Text>
-        ) : (
-          completedChallenges.map(challenge => (
-            <ChallengeCard key={challenge.id} challenge={challenge} />
-          ))
+          <>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Active Challenges
+            </Text>
+            
+            {activeChallenges.length === 0 ? (
+              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+                No active challenges at the moment
+              </Text>
+            ) : (
+              activeChallenges.map(challenge => (
+                <ChallengeCard key={challenge.id} challenge={challenge} />
+              ))
+            )}
+            
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Completed Challenges
+            </Text>
+            
+            {completedChallenges.length === 0 ? (
+              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+                You haven't completed any challenges yet
+              </Text>
+            ) : (
+              completedChallenges.map(challenge => (
+                <ChallengeCard key={challenge.id} challenge={challenge} />
+              ))
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

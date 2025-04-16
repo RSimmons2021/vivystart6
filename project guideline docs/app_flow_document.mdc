@@ -1,0 +1,110 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Application Flow Documentation
+
+## User Journey Flow
+
+### 1. Initial Launch
+- App starts → Journey tab (default route)
+- User sees GLP-1 journey overview
+- Stats display: weight loss, adherence, weeks of treatment
+
+### 2. Core Navigation Flow
+```
+Journey Tab → Goals Tab → Coach Tab → Shots Tab → Progress Tab
+```
+
+### 3. Feature Flows
+
+#### Journey Tab Flow
+```mermaid
+graph TD
+    A[Journey Screen] --> B[Timeline View]
+    B --> C[Milestone Cards]
+    C --> D[Stats Overview]
+    D --> E[Treatment Progress]
+```
+
+#### Goals Tab Flow
+```mermaid
+graph TD
+    A[Goals Screen] --> B[Daily Goals]
+    B --> C[Water Tracking]
+    B --> D[Nutrition Goals]
+    B --> E[Step Goals]
+    A --> F[Custom Goals]
+    F --> G[Add New Goal]
+    F --> H[Track Progress]
+```
+
+#### Coach Tab Flow
+```mermaid
+graph TD
+    A[Coach Screen] --> B[AI Chat Interface]
+    B --> C[User Query]
+    C --> D[AI Response]
+    A --> E[Weight Logging]
+    E --> F[Weight History]
+    E --> G[Progress Charts]
+```
+
+#### Shots Tab Flow
+```mermaid
+graph TD
+    A[Shots Screen] --> B[Calendar View]
+    B --> C[Shot Logging]
+    B --> D[Weight Logging]
+    B --> E[Side Effects]
+    C --> F[Shot History]
+    D --> G[Weight Trends]
+    E --> H[Side Effects History]
+```
+
+#### Progress Tab Flow
+```mermaid
+graph TD
+    A[Progress Screen] --> B[Steps Input]
+    A --> C[Weekly Score]
+    A --> D[Weight Metrics]
+    B --> E[Steps History]
+    C --> F[Progress Charts]
+    D --> G[Weight Analysis]
+```
+
+## Data Flow
+
+### User Input Flow
+1. User enters data (steps/weight/goals)
+2. Frontend validation
+3. API request to backend
+4. Firebase storage update
+5. UI update with confirmation
+
+### Data Retrieval Flow
+1. Screen mount/refresh
+2. API request to backend
+3. Backend fetches from Firebase
+4. Data processing/calculations
+5. UI update with data
+
+### Real-time Updates
+1. Firebase listeners for relevant data
+2. Backend event processing
+3. WebSocket/real-time updates (planned)
+4. UI refresh with new data
+
+## Error Handling Flow
+1. User input validation
+2. Network error handling
+3. Backend validation
+4. Error display to user
+5. Error logging for monitoring
+
+## State Management
+- Local component state for UI
+- Context/Redux for global state (planned)
+- Cached data management
+- Offline data handling (planned)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -13,29 +13,39 @@ import { Card } from '@/components/Card';
 import { AchievementBadge } from '@/components/AchievementBadge';
 import { LevelProgressBar } from '@/components/LevelProgressBar';
 import { StreakCounter } from '@/components/StreakCounter';
-import { useGamificationStore } from '@/store/gamification-store';
+import { useUserStore } from '@/store/user-store';
 import { useThemeStore } from '@/store/theme-store';
+import { useGamificationStore } from '@/store/gamification-store';
 import Colors from '@/constants/colors';
+import type { Achievement } from '@/types';
 
 export default function AchievementsScreen() {
   const router = useRouter();
   const { isDarkMode } = useThemeStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  
-  const { 
-    achievements, 
-    points, 
-    level, 
-    streaks,
-    getUnlockedAchievements,
-    getLockedAchievements
-  } = useGamificationStore();
-  
+  const { user } = useUserStore();
+  const { achievements, fetchAchievements } = useGamificationStore();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  
-  const unlockedAchievements = getUnlockedAchievements();
-  const lockedAchievements = getLockedAchievements();
-  
+
+  // Fetch achievements from backend (now from store)
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    fetchAchievements(user.id);
+    setLoading(false);
+  }, [user?.id]);
+
+  // Points, level, streaks can be calculated from achievements if needed
+  const points = achievements.reduce((sum, a) => sum + (a.points || 0), 0);
+  const level = Math.floor(points / 100) + 1;
+  const streaks = { login: 0, weight: 0, meals: 0 }; // TODO: calculate from achievements if needed
+
+  const unlockedAchievements = achievements.filter(a => a.isUnlocked);
+  const lockedAchievements = achievements.filter(a => !a.isUnlocked);
+
   const categories = [
     { id: null, label: 'All' },
     { id: 'weight', label: 'Weight' },
@@ -45,15 +55,14 @@ export default function AchievementsScreen() {
     { id: 'streak', label: 'Streaks' },
     { id: 'journey', label: 'Journey' },
   ];
-  
+
   const filteredUnlocked = selectedCategory 
     ? unlockedAchievements.filter(a => a.category === selectedCategory)
     : unlockedAchievements;
-    
   const filteredLocked = selectedCategory 
     ? lockedAchievements.filter(a => a.category === selectedCategory)
     : lockedAchievements;
-  
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={[styles.header, { borderBottomColor: themeColors.border }]}>

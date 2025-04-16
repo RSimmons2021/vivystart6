@@ -10,6 +10,8 @@ import Colors from "@/constants/colors";
 import { useUserStore } from "@/store/user-store";
 import { useThemeStore } from "@/store/theme-store";
 import { useGamificationStore } from "@/store/gamification-store";
+import { AuthProvider } from '@/context/AuthProvider';
+import { useAuth } from '@/context/AuthProvider';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -20,10 +22,19 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutContent />
+    </AuthProvider>
+  );
+}
+
+function RootLayoutContent() {
   const { isOnboarded } = useUserStore();
   const { isDarkMode } = useThemeStore();
   const { updateLoginStreak } = useGamificationStore();
   const colorScheme = useColorScheme();
+  const { user } = useAuth();
   
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
@@ -53,10 +64,31 @@ export default function RootLayout() {
     return null; // This will keep the splash screen visible
   }
 
+  // Auth-based routing
+  if (!user) {
+    // Not logged in: show login and register screens
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" options={{ headerShown: false, gestureEnabled: false }} />
+        {/* If you have a register screen, add it here: <Stack.Screen name="register" /> */}
+      </Stack>
+    );
+  }
+
+  // Logged in: show onboarding if not onboarded, otherwise main app
+  if (!isOnboarded) {
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+      </Stack>
+    );
+  }
+
+  // Logged in and onboarded: show main app
   return (
     <ErrorBoundary>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <Stack initialRouteName={isOnboarded ? "(tabs)" : "onboarding"}>
+      <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen 
           name="settings" 
@@ -67,13 +99,6 @@ export default function RootLayout() {
             },
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
-          }} 
-        />
-        <Stack.Screen 
-          name="onboarding" 
-          options={{ 
-            headerShown: false,
-            gestureEnabled: false,
           }} 
         />
         <Stack.Screen 

@@ -6,7 +6,6 @@ import {
   ScrollView, 
   TouchableOpacity,
   Switch,
-  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -27,12 +26,14 @@ import { useThemeStore } from '@/store/theme-store';
 import { useGamificationStore } from '@/store/gamification-store';
 import Colors from '@/constants/colors';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthProvider'; // Correct import
 
 export default function SettingsScreen() {
-  const { user, clearUser, setOnboarded, weightUnit, toggleWeightUnit } = useUserStore();
+  const { user, setOnboarded, weightUnit, toggleWeightUnit } = useUserStore();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const { level, points, getUnlockedAchievements } = useGamificationStore();
   const router = useRouter();
+  const { logout } = useAuth(); // Get logout function from useAuth context
   
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   
@@ -42,26 +43,13 @@ export default function SettingsScreen() {
   // Get unlocked achievements count
   const unlockedAchievements = getUnlockedAchievements();
   
-  const handleLogout = () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => {
-            clearUser();
-            setOnboarded(false);
-            router.replace('/onboarding');
-          },
-        },
-      ]
-    );
+  // Reliable logout handler (no Alert)
+  const handleLogout = async () => {
+    if (typeof logout === 'function') {
+      await logout();
+    }
+    setOnboarded(false);
+    router.replace('/onboarding');
   };
   
   const toggleNotifications = () => {
@@ -235,12 +223,14 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
         
-        <TouchableOpacity 
-          style={[styles.logoutButton, { backgroundColor: themeColors.error }]}
+        {/* Logout row */}
+        <TouchableOpacity
+          style={styles.logoutRow}
           onPress={handleLogout}
         >
-          <LogOut size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
+          <LogOut color={themeColors.error} size={22} />
+          <Text style={[styles.logoutText, { color: themeColors.error }]}>Logout</Text>
+          <ChevronRight color={themeColors.border} size={18} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -322,17 +312,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  logoutButton: {
+  logoutRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 24,
     borderRadius: 12,
   },
   logoutText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

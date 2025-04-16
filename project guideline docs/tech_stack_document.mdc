@@ -1,0 +1,59 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Tech Stack Documentation
+
+## Frontend Stack
+- **Framework**: React Native with Expo (v52.0.33)
+- **Navigation**: Expo Router (v4.0.17)
+- **State Management**: React Hooks (useState, useEffect)
+- **UI Libraries**:
+  - Lucide React Native (v0.475.0) for icons
+  - Victory Native (v36.6.8) for charts and data visualization
+  - React Native Calendars (v1.1303.0) for calendar functionality
+  - React Native Chart Kit (v6.12.0) for additional charting
+  - Expo Vector Icons for UI icons
+- **Database Client**: Supabase JavaScript Client
+
+## Backend Stack
+- **Framework**: Flask (Python)
+- **Authentication**: Supabase Auth
+- **Database**: 
+  - Supabase PostgreSQL
+  - Real-time subscriptions
+  - Row Level Security (RLS)
+- **API Integration**: 
+  - Google Gemini AI for chat functionality
+  - RESTful API endpoints
+  - Supabase Python Client
+- **CORS**: Flask-CORS for cross-origin requests
+
+## Development Tools
+- **Language**: TypeScript (v5.3.3)
+- **Package Manager**: npm/yarn
+- **Code Quality**:
+  - Prettier for code formatting
+  - TypeScript strict mode enabled
+  - PostgreSQL type generation with Supabase
+- **Development Environment**: VS Code recommended
+- **Database Tools**:
+  - Supabase Dashboard for database management
+  - pgAdmin for advanced PostgreSQL management (optional)
+
+## Key Features
+- Tabbed Navigation System
+- Real-time Chat with AI Coach
+- Progress Tracking
+- Goal Management
+- Shot/Medication Tracking
+- Weight Management
+- Step Counting Integration
+- Real-time Data Sync with Supabase
+- Secure Authentication and Authorization

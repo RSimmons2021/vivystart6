@@ -12,6 +12,8 @@ import {
   WeeklyScore
 } from '@/types';
 import { format } from 'date-fns';
+import { useUserStore } from './user-store';
+import { supabase } from '@/lib/supabase';
 
 interface HealthState {
   weightLogs: WeightLog[];
@@ -54,12 +56,20 @@ interface HealthState {
   updateStepLog: (id: string, data: Partial<StepLog>) => void;
   
   // Daily log methods
-  getDailyLog: (date: string) => DailyLog | undefined;
+  getDailyLog: (date: string) => Promise<DailyLog | undefined>;
   updateDailyLog: (date: string, data: Partial<Omit<DailyLog, 'id' | 'date'>>) => void;
   
   // Calculations
   getWeeklyScore: (startDate: string, endDate: string) => WeeklyScore;
   getWeightLoss: () => { total: number; percentage: number };
+  
+  setShots: (shots: Shot[]) => void;
+  setWeightLogs: (weightLogs: WeightLog[]) => void;
+  setSideEffects: (sideEffects: SideEffect[]) => void;
+}
+
+function ensureString(val: string | undefined, fallback = ''): string {
+  return typeof val === 'string' ? val : fallback;
 }
 
 export const useHealthStore = create<HealthState>()(
@@ -75,291 +85,376 @@ export const useHealthStore = create<HealthState>()(
       dailyLogs: [],
       
       // Weight methods
-      addWeightLog: (log) => {
-        const newLog = { ...log, id: Date.now().toString() };
-        set((state) => ({ 
-          weightLogs: [...state.weightLogs, newLog] 
-        }));
-        
-        // Update daily log if it exists
-        const dailyLog = get().getDailyLog(log.date);
-        if (dailyLog) {
-          get().updateDailyLog(log.date, { weight: log.weight });
-        }
-      },
-      
-      updateWeightLog: (id, data) => {
-        set((state) => ({
-          weightLogs: state.weightLogs.map((log) => 
-            log.id === id ? { ...log, ...data } : log
-          )
-        }));
-        
-        // Update daily log if date hasn't changed
-        const updatedLog = get().weightLogs.find(log => log.id === id);
-        if (updatedLog) {
-          const dailyLog = get().getDailyLog(updatedLog.date);
-          if (dailyLog && data.weight) {
-            get().updateDailyLog(updatedLog.date, { weight: data.weight });
+      addWeightLog: async (log: Omit<WeightLog, 'id'>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const newLog = { ...log, date: ensureString(log.date), user_id: user.id };
+          const { data, error } = await supabase
+            .from('weight_logs')
+            .insert([newLog]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => ({ weightLogs: [...state.weightLogs, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+            // Optionally update daily log
+            const dailyLog = await get().getDailyLog(newLog.date);
+            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
+              await get().updateDailyLog(newLog.date, { weight: newLog.weight });
+            }
           }
-        }
+        } catch (e) { /* handle error */ }
       },
-      
-      deleteWeightLog: (id) => {
-        set((state) => ({
-          weightLogs: state.weightLogs.filter((log) => log.id !== id)
-        }));
+      updateWeightLog: async (id: string, data: Partial<WeightLog>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, user_id: user.id };
+          const { error } = await supabase
+            .from('weight_logs')
+            .update([updateData]).eq('id', id);
+          if (error) throw error;
+          set((state) => ({ weightLogs: state.weightLogs.map(log => log.id === id ? { ...log, ...updateData, date: ensureString(updateData.date) } : log) }));
+          if (updateData.weight && updateData.date) {
+            const dailyLog = await get().getDailyLog(updateData.date);
+            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
+              await get().updateDailyLog(updateData.date, { weight: updateData.weight });
+            }
+          }
+        } catch (e) { /* handle error */ }
+      },
+      deleteWeightLog: async (id: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { error } = await supabase
+            .from('weight_logs')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          set((state) => ({
+            weightLogs: state.weightLogs.filter((log) => log.id !== id)
+          }));
+        } catch (e) { /* handle error */ }
       },
       
       // Shot methods
-      addShot: (shot) => {
-        const newShot = { ...shot, id: Date.now().toString() };
-        set((state) => ({ 
-          shots: [...state.shots, newShot] 
-        }));
-        
-        // Update daily log
-        const dailyLog = get().getDailyLog(shot.date);
-        if (dailyLog) {
-          get().updateDailyLog(shot.date, { shotTaken: true });
-        }
+      addShot: async (shot: Omit<Shot, 'id'>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const newShot = { ...shot, date: ensureString(shot.date), time: ensureString(shot.time), user_id: user.id };
+          const { data, error } = await supabase
+            .from('shots')
+            .insert([newShot]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => ({ shots: [...state.shots, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date), time: ensureString((maybeObj as Record<string, any>).time) }] }));
+            // Optionally update daily log
+            const dailyLog = await get().getDailyLog(newShot.date);
+            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
+              await get().updateDailyLog(newShot.date, { shotTaken: true });
+            }
+          }
+        } catch (e) { /* handle error */ }
       },
-      
-      updateShot: (id, data) => {
-        set((state) => ({
-          shots: state.shots.map((shot) => 
-            shot.id === id ? { ...shot, ...data } : shot
-          )
-        }));
+      updateShot: async (id: string, data: Partial<Shot>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, time: data.time ? ensureString(data.time) : undefined, user_id: user.id };
+          const { error } = await supabase
+            .from('shots')
+            .update([updateData]).eq('id', id);
+          if (error) throw error;
+          set((state) => ({ shots: state.shots.map(shot => shot.id === id ? { ...shot, ...updateData, date: ensureString(updateData.date), time: ensureString(updateData.time) } : shot) }));
+        } catch (e) { /* handle error */ }
       },
-      
-      deleteShot: (id) => {
-        set((state) => ({
-          shots: state.shots.filter((shot) => shot.id !== id)
-        }));
+      deleteShot: async (id: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { error } = await supabase
+            .from('shots')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          set((state) => ({
+            shots: state.shots.filter((shot) => shot.id !== id)
+          }));
+        } catch (e) { /* handle error */ }
       },
       
       // Side effect methods
-      addSideEffect: (effect) => {
-        const newEffect = { ...effect, id: Date.now().toString() };
-        set((state) => ({ 
-          sideEffects: [...state.sideEffects, newEffect] 
-        }));
-        
-        // Update daily log
-        const dailyLog = get().getDailyLog(effect.date);
-        if (dailyLog) {
-          get().updateDailyLog(effect.date, { 
-            sideEffects: [...dailyLog.sideEffects, newEffect] 
-          });
-        }
+      addSideEffect: async (effect: Omit<SideEffect, 'id'>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const newEffect = { ...effect, date: ensureString(effect.date), type: ensureString(effect.type), severity: effect.severity ?? 'mild', user_id: user.id };
+          const { data, error } = await supabase
+            .from('side_effects')
+            .insert([newEffect]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => ({ sideEffects: [...state.sideEffects, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date), type: ensureString((maybeObj as Record<string, any>).type) }] }));
+            // Optionally update daily log
+            const dailyLog = await get().getDailyLog(newEffect.date);
+            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null && Array.isArray(dailyLog.sideEffects)) {
+              await get().updateDailyLog(newEffect.date, {
+                sideEffects: [...dailyLog.sideEffects, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date), type: ensureString((maybeObj as Record<string, any>).type) }]
+              });
+            }
+          }
+        } catch (e) { /* handle error */ }
       },
-      
-      updateSideEffect: (id, data) => {
-        set((state) => ({
-          sideEffects: state.sideEffects.map((effect) => 
-            effect.id === id ? { ...effect, ...data } : effect
-          )
-        }));
+      updateSideEffect: async (id: string, data: Partial<SideEffect>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, type: data.type ? ensureString(data.type) : undefined, severity: data.severity ?? 'mild', user_id: user.id };
+          const { error } = await supabase
+            .from('side_effects')
+            .update([updateData]).eq('id', id);
+          if (error) throw error;
+          set((state) => ({ sideEffects: state.sideEffects.map(effect => effect.id === id ? { ...effect, ...updateData, date: ensureString(updateData.date), type: ensureString(updateData.type) } : effect) }));
+        } catch (e) { /* handle error */ }
       },
-      
-      deleteSideEffect: (id) => {
-        set((state) => ({
-          sideEffects: state.sideEffects.filter((effect) => effect.id !== id)
-        }));
-        
-        // Update daily logs
-        set((state) => ({
-          dailyLogs: state.dailyLogs.map(log => ({
-            ...log,
-            sideEffects: log.sideEffects.filter(effect => effect.id !== id)
-          }))
-        }));
+      deleteSideEffect: async (id: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { error } = await supabase
+            .from('side_effects')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          set((state) => ({
+            sideEffects: state.sideEffects.filter((effect) => effect.id !== id)
+          }));
+          // Optionally update daily logs
+          set((state) => ({
+            dailyLogs: state.dailyLogs.map(log => ({
+              ...log,
+              sideEffects: log.sideEffects.filter(effect => effect.id !== id)
+            }))
+          }));
+        } catch (e) { /* handle error */ }
       },
       
       // Meal methods
-      addMeal: (meal) => {
-        const newMeal = { ...meal, id: Date.now().toString() };
-        set((state) => ({ 
-          meals: [...state.meals, newMeal] 
-        }));
-        
-        // Update daily log
-        const dailyLog = get().getDailyLog(meal.date);
-        if (dailyLog) {
-          get().updateDailyLog(meal.date, { 
-            meals: [...dailyLog.meals, newMeal] 
-          });
-        }
+      addMeal: async (meal: Omit<Meal, 'id'>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const newMeal = { ...meal, date: ensureString(meal.date), user_id: user.id };
+          const { data, error } = await supabase
+            .from('meals')
+            .insert([newMeal]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => ({ meals: [...state.meals, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+          }
+        } catch (e) { /* handle error */ }
       },
-      
-      updateMeal: (id, data) => {
-        set((state) => ({
-          meals: state.meals.map((meal) => 
-            meal.id === id ? { ...meal, ...data } : meal
-          ),
-          savedMeals: state.savedMeals.map((meal) => 
-            meal.id === id ? { ...meal, ...data } : meal
-          )
-        }));
-        
-        // Update daily logs
-        set((state) => ({
-          dailyLogs: state.dailyLogs.map(log => ({
-            ...log,
-            meals: log.meals.map(meal => 
-              meal.id === id ? { ...meal, ...data } : meal
-            )
-          }))
-        }));
-      },
-      
-      deleteMeal: (id) => {
-        set((state) => ({
-          meals: state.meals.filter((meal) => meal.id !== id)
-        }));
-        
-        // Update daily logs
-        set((state) => ({
-          dailyLogs: state.dailyLogs.map(log => ({
-            ...log,
-            meals: log.meals.filter(meal => meal.id !== id)
-          }))
-        }));
-      },
-      
-      saveMeal: (id) => {
-        const mealToSave = get().meals.find(meal => meal.id === id);
-        if (mealToSave && !get().savedMeals.some(meal => meal.id === id)) {
+      updateMeal: async (id: string, data: Partial<Meal>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, user_id: user.id };
+          const { error } = await supabase
+            .from('meals')
+            .update([updateData]).eq('id', id);
+          if (error) throw error;
           set((state) => ({
-            savedMeals: [...state.savedMeals, { ...mealToSave, isSaved: true }],
-            meals: state.meals.map(meal => 
-              meal.id === id ? { ...meal, isSaved: true } : meal
-            )
+            meals: state.meals.map((meal) => meal.id === id ? { ...meal, ...updateData, date: ensureString(updateData.date) } : meal),
+            savedMeals: state.savedMeals.map((meal) => meal.id === id ? { ...meal, ...updateData, date: ensureString(updateData.date) } : meal)
           }));
-        }
+        } catch (e) { /* handle error */ }
       },
-      
-      unsaveMeal: (id) => {
-        set((state) => ({
-          savedMeals: state.savedMeals.filter(meal => meal.id !== id),
-          meals: state.meals.map(meal => 
-            meal.id === id ? { ...meal, isSaved: false } : meal
-          )
-        }));
+      deleteMeal: async (id: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { error } = await supabase
+            .from('meals')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          set((state) => ({ meals: state.meals.filter((meal) => meal.id !== id) }));
+        } catch (e) { /* handle error */ }
+      },
+      saveMeal: async (id: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('saved_meals')
+            .insert([{ meal_id: id, user_id: user.id }]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => {
+              const meal = state.meals.find(m => m.id === id);
+              if (!meal) return {};
+              return {
+                savedMeals: [...state.savedMeals, { ...(meal as Record<string, any>), isSaved: true, date: ensureString((meal as Record<string, any>).date) }],
+                meals: state.meals.map(meal => meal.id === id ? { ...(meal as Record<string, any>), isSaved: true, date: ensureString((meal as Record<string, any>).date) } : meal)
+              };
+            });
+          }
+        } catch (e) { /* handle error */ }
+      },
+      unsaveMeal: async (id: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          // Find saved meal id
+          const savedMeal = get().savedMeals.find(m => m.id === id);
+          if (!savedMeal) return;
+          const { error } = await supabase
+            .from('saved_meals')
+            .delete()
+            .eq('meal_id', id)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          set((state) => ({
+            savedMeals: state.savedMeals.filter(meal => meal.id !== id),
+            meals: state.meals.map(meal => meal.id === id ? { ...meal, isSaved: false, date: ensureString(meal.date) } : meal)
+          }));
+        } catch (e) { /* handle error */ }
       },
       
       // Water methods
-      addWaterLog: (log) => {
-        const newLog = { ...log, id: Date.now().toString() };
-        set((state) => ({ 
-          waterLogs: [...state.waterLogs, newLog] 
-        }));
-        
-        // Update daily log
-        const dailyLog = get().getDailyLog(log.date);
-        if (dailyLog) {
-          const currentWater = dailyLog.waterOz || 0;
-          get().updateDailyLog(log.date, { 
-            waterOz: currentWater + log.amount 
-          });
-        } else {
-          // Create new daily log
-          const newDailyLog: DailyLog = {
-            id: Date.now().toString(),
-            date: log.date,
-            fruitsVeggiesServings: 0,
-            proteinGrams: 0,
-            waterOz: log.amount,
-            steps: 0,
-            meals: [],
-            sideEffects: []
-          };
-          set((state) => ({
-            dailyLogs: [...state.dailyLogs, newDailyLog]
-          }));
-        }
+      addWaterLog: async (log: Omit<WaterLog, 'id'>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const newLog = { ...log, date: ensureString(log.date), user_id: user.id };
+          const { data, error } = await supabase
+            .from('water_logs')
+            .insert([newLog]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => ({ waterLogs: [...state.waterLogs, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+          }
+        } catch (e) { /* handle error */ }
       },
-      
-      updateWaterLog: (id, data) => {
-        set((state) => ({
-          waterLogs: state.waterLogs.map((log) => 
-            log.id === id ? { ...log, ...data } : log
-          )
-        }));
+      updateWaterLog: async (id: string, data: Partial<WaterLog>) => {
+        // Not implemented in backend, but could be added if needed
       },
       
       // Step methods
-      addStepLog: (log) => {
-        const newLog = { ...log, id: Date.now().toString() };
-        set((state) => ({ 
-          stepLogs: [...state.stepLogs, newLog] 
-        }));
-        
-        // Update daily log
-        const dailyLog = get().getDailyLog(log.date);
-        if (dailyLog) {
-          get().updateDailyLog(log.date, { steps: log.count });
-        } else {
-          // Create new daily log
-          const newDailyLog: DailyLog = {
-            id: Date.now().toString(),
-            date: log.date,
-            fruitsVeggiesServings: 0,
-            proteinGrams: 0,
-            waterOz: 0,
-            steps: log.count,
-            meals: [],
-            sideEffects: []
-          };
-          set((state) => ({
-            dailyLogs: [...state.dailyLogs, newDailyLog]
-          }));
-        }
+      addStepLog: async (log: Omit<StepLog, 'id'>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const newLog = { ...log, date: ensureString(log.date), user_id: user.id };
+          const { data, error } = await supabase
+            .from('step_logs')
+            .insert([newLog]);
+          if (error) throw error;
+          const dataArr = data as unknown[];
+          const maybeObj = dataArr[0];
+          if (
+            data &&
+            Array.isArray(data) &&
+            dataArr.length > 0 &&
+            typeof maybeObj === 'object' &&
+            maybeObj !== null &&
+            !Array.isArray(maybeObj)
+          ) {
+            set((state) => ({ stepLogs: [...state.stepLogs, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+          }
+        } catch (e) { /* handle error */ }
       },
-      
-      updateStepLog: (id, data) => {
-        set((state) => ({
-          stepLogs: state.stepLogs.map((log) => 
-            log.id === id ? { ...log, ...data } : log
-          )
-        }));
+      updateStepLog: async (id: string, data: Partial<StepLog>) => {
+        // Not implemented in backend, but could be added if needed
       },
       
       // Daily log methods
-      getDailyLog: (date) => {
-        return get().dailyLogs.find(log => log.date === date);
+      getDailyLog: async (date: string) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return undefined;
+        try {
+          const { data, error } = await supabase
+            .from('daily_logs')
+            .select('*')
+            .eq('date', date)
+            .eq('user_id', user.id)
+            .single();
+          if (error) throw error;
+          return data as DailyLog;
+        } catch (e) { /* handle error */ }
+        return undefined;
       },
-      
-      updateDailyLog: (date, data) => {
-        const existingLog = get().getDailyLog(date);
-        
-        if (existingLog) {
-          // Update existing log
-          set((state) => ({
-            dailyLogs: state.dailyLogs.map((log) => 
-              log.date === date ? { ...log, ...data } : log
-            )
-          }));
-        } else {
-          // Create new log
-          const newLog: DailyLog = {
-            id: Date.now().toString(),
-            date,
-            fruitsVeggiesServings: data.fruitsVeggiesServings || 0,
-            proteinGrams: data.proteinGrams || 0,
-            waterOz: data.waterOz || 0,
-            steps: data.steps || 0,
-            weight: data.weight,
-            shotTaken: data.shotTaken || false,
-            meals: data.meals || [],
-            sideEffects: data.sideEffects || []
-          };
-          
-          set((state) => ({
-            dailyLogs: [...state.dailyLogs, newLog]
-          }));
-        }
+      updateDailyLog: async (date: string, data: Partial<Omit<DailyLog, 'id' | 'date'>>) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          // Upsert daily log for the user and date
+          const { error } = await supabase
+            .from('daily_logs')
+            .upsert([{ ...data, date, user_id: user.id }], { onConflict: 'date,user_id' });
+          if (error) throw error;
+          // Optionally refetch daily log
+          // (You can add logic here to update Zustand state if needed)
+        } catch (e) { /* handle error */ }
       },
       
       // Calculations
@@ -410,7 +505,24 @@ export const useHealthStore = create<HealthState>()(
           total: parseFloat(weightLoss.toFixed(1)),
           percentage: parseFloat(percentageLoss.toFixed(1))
         };
-      }
+      },
+      
+      setShots: (shots: Shot[]) => set({ shots: shots.map(shot => ({
+        ...shot,
+        date: ensureString(shot.date),
+        time: ensureString(shot.time),
+      })) }),
+      setWeightLogs: (weightLogs: WeightLog[]) => set({ weightLogs: weightLogs.map(log => ({
+        ...log,
+        date: ensureString(log.date),
+        weight: log.weight ?? 0,
+      })) }),
+      setSideEffects: (sideEffects: SideEffect[]) => set({ sideEffects: sideEffects.map(effect => ({
+        ...effect,
+        date: ensureString(effect.date),
+        type: ensureString(effect.type),
+        severity: effect.severity ?? 'mild',
+      })) }),
     }),
     {
       name: 'health-storage',

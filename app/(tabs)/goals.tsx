@@ -15,18 +15,22 @@ import { Card } from '@/components/Card';
 import { ProgressBar } from '@/components/ProgressBar';
 import { Button } from '@/components/Button';
 import { AchievementUnlockedModal } from '@/components/AchievementUnlockedModal';
-import { useJourneyStore } from '@/store/journey-store';
-import { useGamificationStore } from '@/store/gamification-store';
 import { useThemeStore } from '@/store/theme-store';
 import Colors from '@/constants/colors';
 import { Achievement } from '@/types';
+import { useUserStore } from '@/store/user-store';
+import { useGamificationStore } from '@/store/gamification-store';
+import { useJourneyStore } from '@/store/journey-store';
 
 export default function GoalsScreen() {
-  const { goals, addGoal, updateGoal, completeGoal, deleteGoal, updateGoalProgress } = useJourneyStore();
-  const { unlockAchievement, achievements } = useGamificationStore();
+  const { user } = useUserStore();
   const { isDarkMode } = useThemeStore();
+  const { achievements, unlockAchievement } = useGamificationStore();
+  const { goals, addGoal, updateGoal, deleteGoal, updateGoalProgress, fetchJourneyStages } = useJourneyStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const [title, setTitle] = useState('');
@@ -47,6 +51,14 @@ export default function GoalsScreen() {
     { value: 'other', label: 'Other' },
   ];
 
+  // Fetch goals from backend (now from store)
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    fetchJourneyStages(user.id);
+    setLoading(false);
+  }, [user?.id]);
+
   const handleAddGoal = () => {
     setEditingGoal(null);
     setTitle('');
@@ -65,55 +77,68 @@ export default function GoalsScreen() {
     setModalVisible(true);
   };
 
-  const handleSaveGoal = () => {
-    if (!title.trim()) return;
-    
-    if (editingGoal) {
-      updateGoal(editingGoal.id, {
-        title,
-        description,
-        category,
-        targetDate: targetDate || undefined,
-      });
-    } else {
-      addGoal({
-        title,
-        description,
-        category,
-        targetDate: targetDate || undefined,
-        isCompleted: false,
-        progress: 0,
-      });
-      
-      // Check if this is the first goal
-      if (goals.length === 0) {
-        checkAndUnlockAchievement('first-goal-complete');
+  const handleSaveGoal = async () => {
+    if (!title.trim() || !user?.id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      if (editingGoal) {
+        await updateGoal(editingGoal.id, {
+          title,
+          description,
+          category,
+          targetDate: targetDate || undefined,
+        });
+      } else {
+        await addGoal({
+          title,
+          description,
+          category,
+          targetDate: targetDate || undefined,
+          isCompleted: false,
+          progress: 0,
+        });
       }
+      setModalVisible(false);
+    } catch {
+      setError('Failed to save goal.');
+    } finally {
+      setLoading(false);
     }
-    
-    setModalVisible(false);
   };
 
-  const handleUpdateProgress = (id: string, progress: number) => {
-    updateGoalProgress(id, progress);
-    
-    // If goal is completed, check for achievement
-    if (progress === 100) {
-      checkAndUnlockAchievement('first-goal-complete');
+  const handleUpdateProgress = async (id: string, progress: number) => {
+    if (!user?.id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await updateGoalProgress(id, progress);
+    } catch {
+      setError('Failed to update progress.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleToggleComplete = (id: string, isCompleted: boolean) => {
     if (isCompleted) {
-      updateGoal(id, { isCompleted: false, progress: 0 });
+      handleUpdateProgress(id, 0);
     } else {
-      completeGoal(id);
-      checkAndUnlockAchievement('first-goal-complete');
+      handleUpdateProgress(id, 100);
     }
   };
 
-  const handleDeleteGoal = (id: string) => {
-    deleteGoal(id);
+  const handleDeleteGoal = async (id: string) => {
+    if (!user?.id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteGoal(id);
+    } catch {
+      setError('Failed to delete goal.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   const checkAndUnlockAchievement = (achievementId: string) => {
@@ -162,7 +187,11 @@ export default function GoalsScreen() {
       </View>
       
       <ScrollView style={styles.scrollView}>
-        {goals.length === 0 ? (
+        {loading ? (
+          <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>Loading...</Text>
+        ) : error ? (
+          <Text style={[styles.errorText, { color: themeColors.error }]}>{error}</Text>
+        ) : goals.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No goals yet</Text>
             <Text style={[styles.emptySubtext, { color: themeColors.textTertiary }]}>Tap the + button to add your first goal</Text>
@@ -385,6 +414,14 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  errorText: {
+    textAlign: 'center',
+    marginTop: 20,
   },
   emptyContainer: {
     flex: 1,

@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JourneyStage, Goal } from '@/types';
+import { useUserStore } from './user-store';
+import { supabase } from '@/lib/supabase';
 
 interface JourneyState {
   journeyStages: JourneyStage[];
@@ -11,6 +13,7 @@ interface JourneyState {
   addJourneyStage: (stage: Omit<JourneyStage, 'id'>) => void;
   updateJourneyStage: (id: string, data: Partial<JourneyStage>) => void;
   completeJourneyStage: (id: string) => void;
+  deleteJourneyStage: (id: string) => void;
   
   // Goal methods
   addGoal: (goal: Omit<Goal, 'id'>) => void;
@@ -18,6 +21,7 @@ interface JourneyState {
   completeGoal: (id: string) => void;
   deleteGoal: (id: string) => void;
   updateGoalProgress: (id: string, progress: number) => void;
+  fetchJourneyStages: (user_id: string) => void;
 }
 
 // Default journey stages
@@ -64,27 +68,59 @@ export const useJourneyStore = create<JourneyState>()(
       goals: [],
       
       // Journey methods
-      addJourneyStage: (stage) => {
-        const newStage = { ...stage, id: Date.now().toString() };
-        set((state) => ({ 
-          journeyStages: [...state.journeyStages, newStage] 
-        }));
+      addJourneyStage: async (stage) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('journey_stages')
+            .insert([stage]);
+          if (error) throw error;
+          if (data) set((state) => ({ journeyStages: [...state.journeyStages, data[0]] }));
+        } catch (e) { /* handle error */ }
       },
       
-      updateJourneyStage: (id, data) => {
-        set((state) => ({
-          journeyStages: state.journeyStages.map((stage) => 
-            stage.id === id ? { ...stage, ...data } : stage
-          )
-        }));
+      updateJourneyStage: async (id, data) => {
+        try {
+          const { data: updatedData, error } = await supabase
+            .from('journey_stages')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
+          if (error) throw error;
+          if (updatedData) set((state) => ({
+            journeyStages: state.journeyStages.map(stage => stage.id === id ? updatedData : stage)
+          }));
+        } catch (e) { /* handle error */ }
       },
       
-      completeJourneyStage: (id) => {
-        set((state) => ({
-          journeyStages: state.journeyStages.map((stage) => 
-            stage.id === id ? { ...stage, isCompleted: true } : stage
-          )
-        }));
+      completeJourneyStage: async (id) => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        await get().updateJourneyStage(id, { isCompleted: true });
+      },
+      
+      deleteJourneyStage: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('journey_stages')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          set((state) => ({ journeyStages: state.journeyStages.filter(stage => stage.id !== id) }));
+        } catch (e) { /* handle error */ }
+      },
+      
+      fetchJourneyStages: async (user_id) => {
+        try {
+          const { data, error } = await supabase
+            .from('journey_stages')
+            .select('*')
+            .eq('user_id', user_id);
+          if (error) throw error;
+          if (data) set({ journeyStages: data });
+        } catch (e) { /* handle error */ }
       },
       
       // Goal methods

@@ -29,6 +29,9 @@ export default function MealDetailScreen() {
   
   const meal = meals.find(m => m.id === id);
   
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
   if (!meal) {
     return (
       <SafeAreaView style={styles.container}>
@@ -39,16 +42,33 @@ export default function MealDetailScreen() {
     );
   }
   
-  const handleToggleSave = () => {
-    if (meal.isSaved) {
-      unsaveMeal(meal.id);
-    } else {
-      saveMeal(meal.id);
+  const handleToggleSave = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (meal.isSaved) {
+        await unsaveMeal(meal.id);
+      } else {
+        await saveMeal(meal.id);
+      }
+    } catch (e) {
+      setError('Failed to update saved state.');
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handleDelete = () => {
-    deleteMeal(meal.id);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteMeal(meal.id);
+      // Optionally navigate away or show a success message
+    } catch (e) {
+      setError('Failed to delete meal.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   return (
@@ -72,6 +92,7 @@ export default function MealDetailScreen() {
                   meal.isSaved && styles.savedButton
                 ]}
                 onPress={handleToggleSave}
+                disabled={loading}
               >
                 <Heart 
                   size={20} 
@@ -82,11 +103,16 @@ export default function MealDetailScreen() {
               <TouchableOpacity 
                 style={styles.actionButton}
                 onPress={handleDelete}
+                disabled={loading}
               >
                 <Trash2 size={20} color={Colors.error} />
               </TouchableOpacity>
             </View>
           </View>
+          
+          {error && (
+            <Text style={{ color: Colors.error, textAlign: 'center', marginVertical: 8 }}>{error}</Text>
+          )}
           
           <View style={styles.metaInfo}>
             <View style={styles.metaItem}>

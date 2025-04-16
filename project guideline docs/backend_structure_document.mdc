@@ -1,0 +1,125 @@
+# Backend Structure Documentation
+
+## Architecture Overview
+The backend is built using Flask and Supabase (PostgreSQL), following a RESTful architecture with the following key components:
+
+## Supabase Integration
+- Authentication System (Supabase Auth)
+- Relational Database Structure (PostgreSQL):
+  ```
+  Tables:
+    users
+      id (uuid, primary key)
+      name
+      email
+      start_date
+    measurements
+      id (uuid, primary key)
+      user_id (foreign key)
+      type (weight, steps, etc)
+      value
+      date
+    medications
+      id (uuid, primary key)
+      user_id (foreign key)
+      date
+      type
+      dosage
+      taken
+    goals
+      id (uuid, primary key)
+      user_id (foreign key)
+      title
+      description
+      progress
+      created
+    progress
+      id (uuid, primary key)
+      user_id (foreign key)
+      date
+      weight
+      steps
+      nutrition
+    chat_history
+      id (uuid, primary key)
+      user_id (foreign key)
+      message
+      is_user
+      timestamp
+  ```
+
+## Flask API Endpoints
+
+### Authentication Endpoints (To Be Implemented)
+- POST /auth/register
+- POST /auth/login
+- POST /auth/logout
+- GET /auth/user
+
+### Health Data Endpoints
+- GET /weight - Retrieve weight history
+- POST /weight - Log new weight
+- GET /steps - Get step count history
+- POST /steps - Log daily steps
+
+### Progress Endpoints
+- GET /progress - Get overall progress
+- POST /progress - Update progress metrics
+- GET /progress/stats - Get statistics and calculations
+
+### Goals Endpoints
+- GET /goals - List all goals
+- POST /add-goal - Create new goal
+- PUT /goals/{id} - Update goal
+- DELETE /goals/{id} - Delete goal
+
+### Coach Endpoints
+- GET /coach - Get coaching data
+- POST /gemini-chat - AI chat interaction
+- GET /coach/history - Get chat history
+
+### Journey Endpoints
+- GET /journey - Get journey milestones
+- POST /journey - Add journey milestone
+
+### Shots/Medication Endpoints
+- GET /shots - Get medication schedule
+- POST /shots - Log medication
+- GET /side-effects - Get side effects history
+- POST /side-effects - Log side effects
+
+## Error Handling
+- Standardized error responses
+- HTTP status codes alignment
+- Error logging and monitoring
+
+## Security Measures
+- Supabase Auth for authentication
+- Row Level Security (RLS) policies
+- CORS configuration
+- Input validation
+- Rate limiting (to be implemented)
+
+## Data Storage
+### Supabase Tables
+- users
+- measurements
+- medications
+- goals
+- progress
+- chat_history
+
+### Local Storage (Flask)
+- Temporary session data
+- Cache for frequently accessed data
+
+## API Response Format
+Standard JSON response structure:
+```json
+{
+  "success": boolean,
+  "data": object | array,
+  "message": string,
+  "errors": array (optional)
+}
+```

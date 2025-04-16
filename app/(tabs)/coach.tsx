@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -34,6 +34,7 @@ import { useUserStore } from '@/store/user-store';
 import { useThemeStore } from '@/store/theme-store';
 import Colors from '@/constants/colors';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
+import { DailyLog } from '@/types';
 
 // Define message type for chat
 interface ChatMessage {
@@ -53,12 +54,13 @@ export default function CoachScreen() {
   } = useHealthStore();
   
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'weight' | 'fruits' | 'protein' | 'steps'>('weight');
+  const [modalType, setModalType] = useState<'weight' | 'fruits' | 'protein' | 'steps' | 'water'>('weight');
   const [weightInput, setWeightInput] = useState('');
   const [weightDate, setWeightDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [fruitsInput, setFruitsInput] = useState('');
   const [proteinInput, setProteinInput] = useState('');
   const [stepsInput, setStepsInput] = useState('');
+  const [waterInput, setWaterInput] = useState('');
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
   
@@ -74,18 +76,23 @@ export default function CoachScreen() {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const [loading, setLoading] = useState(false);
   
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
   
   const today = format(new Date(), 'yyyy-MM-dd');
-  const dailyLog = getDailyLog(today) || {
-    fruitsVeggiesServings: 0,
-    proteinGrams: 0,
-    steps: 0,
-    waterOz: 0
-  };
+  const [dailyLog, setDailyLog] = useState<DailyLog | undefined>(undefined);
 
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const log = await getDailyLog(today);
+      if (isMounted) setDailyLog(log);
+    })();
+    return () => { isMounted = false; };
+  }, [today, getDailyLog]);
+  
   // Calendar related functions
   const monthStart = startOfMonth(calendarDate);
   const monthEnd = endOfMonth(calendarDate);
@@ -105,7 +112,7 @@ export default function CoachScreen() {
     setDatePickerVisible(false);
   };
 
-  const handleAddPress = (type: 'weight' | 'fruits' | 'protein' | 'steps') => {
+  const handleAddPress = (type: 'weight' | 'fruits' | 'protein' | 'steps' | 'water') => {
     setModalType(type);
     
     // Reset inputs
@@ -114,50 +121,73 @@ export default function CoachScreen() {
     setFruitsInput('');
     setProteinInput('');
     setStepsInput('');
+    setWaterInput('');
     
     setModalVisible(true);
   };
 
-  const handleSave = () => {
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    setModalLoading(true);
+    setModalError(null);
     const currentDate = format(new Date(), 'yyyy-MM-dd');
-    
-    switch (modalType) {
-      case 'weight':
-        const weightValue = parseFloat(weightInput);
-        if (!isNaN(weightValue) && weightValue > 0) {
-          addWeightLog({
-            date: weightDate || currentDate,
-            weight: weightValue,
-          });
+    try {
+      switch (modalType) {
+        case 'weight': {
+          const weightValue = parseFloat(weightInput);
+          if (!isNaN(weightValue) && weightValue > 0) {
+            await addWeightLog({
+              date: weightDate || currentDate,
+              weight: weightValue,
+            });
+          }
+          break;
         }
-        break;
-      case 'fruits':
-        const fruitsValue = parseInt(fruitsInput);
-        if (!isNaN(fruitsValue) && fruitsValue >= 0) {
-          updateDailyLog(currentDate, {
-            fruitsVeggiesServings: fruitsValue,
-          });
+        case 'fruits': {
+          const fruitsValue = parseInt(fruitsInput);
+          if (!isNaN(fruitsValue) && fruitsValue >= 0) {
+            await updateDailyLog(currentDate, {
+              fruitsVeggiesServings: fruitsValue,
+            });
+          }
+          break;
         }
-        break;
-      case 'protein':
-        const proteinValue = parseInt(proteinInput);
-        if (!isNaN(proteinValue) && proteinValue >= 0) {
-          updateDailyLog(currentDate, {
-            proteinGrams: proteinValue,
-          });
+        case 'protein': {
+          const proteinValue = parseInt(proteinInput);
+          if (!isNaN(proteinValue) && proteinValue >= 0) {
+            await updateDailyLog(currentDate, {
+              proteinGrams: proteinValue,
+            });
+          }
+          break;
         }
-        break;
-      case 'steps':
-        const stepsValue = parseInt(stepsInput);
-        if (!isNaN(stepsValue) && stepsValue >= 0) {
-          updateDailyLog(currentDate, {
-            steps: stepsValue,
-          });
+        case 'steps': {
+          const stepsValue = parseInt(stepsInput);
+          if (!isNaN(stepsValue) && stepsValue >= 0) {
+            await updateDailyLog(currentDate, {
+              steps: stepsValue,
+            });
+          }
+          break;
         }
-        break;
+        case 'water': {
+          const waterValue = parseInt(waterInput);
+          if (!isNaN(waterValue) && waterValue >= 0) {
+            await updateDailyLog(currentDate, {
+              waterOz: waterValue,
+            });
+          }
+          break;
+        }
+      }
+      setModalVisible(false);
+    } catch (e) {
+      setModalError('Failed to save. Please try again.');
+    } finally {
+      setModalLoading(false);
     }
-    
-    setModalVisible(false);
   };
 
   const getModalTitle = () => {
@@ -170,6 +200,8 @@ export default function CoachScreen() {
         return 'Log Protein';
       case 'steps':
         return 'Log Steps';
+      case 'water':
+        return 'Log Water';
       default:
         return 'Log Data';
     }
@@ -253,6 +285,20 @@ export default function CoachScreen() {
             />
           </>
         );
+      case 'water':
+        return (
+          <>
+            <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Water (oz)</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: themeColors.backgroundSecondary, color: themeColors.text }]}
+              value={waterInput}
+              onChangeText={setWaterInput}
+              placeholder="Enter ounces"
+              placeholderTextColor={themeColors.textTertiary}
+              keyboardType="numeric"
+            />
+          </>
+        );
       default:
         return null;
     }
@@ -263,9 +309,42 @@ export default function CoachScreen() {
     setChatModalVisible(true);
   };
 
+  // Fetch chat history when chat modal opens
+  useEffect(() => {
+    if (chatModalVisible && user?.id) {
+      setLoading(true);
+      fetch(`http://localhost:5000/gemini-chat/history?user_id=${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.history) {
+            setMessages(
+              data.history.map((msg: any) => ({
+                id: msg.id?.toString() || Math.random().toString(),
+                text: msg.message,
+                isUser: msg.is_user,
+                timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
+              }))
+            );
+          }
+        })
+        .catch(() => {
+          setMessages([
+            {
+              id: 'error',
+              text: 'Could not load chat history.',
+              isUser: false,
+              timestamp: new Date()
+            }
+          ]);
+        })
+        .finally(() => setLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatModalVisible, user?.id]);
+
   // Handle sending a message
-  const handleSendMessage = () => {
-    if (inputMessage.trim() === '') return;
+  const handleSendMessage = async () => {
+    if (inputMessage.trim() === '' || !user?.id) return;
     
     // Add user message
     const userMessage: ChatMessage = {
@@ -277,30 +356,33 @@ export default function CoachScreen() {
     
     setMessages(prevMessages => [...prevMessages, userMessage]);
     setInputMessage('');
+    setLoading(true);
     
-    // Simulate AI response (in a real app, this would call the Gemini API)
-    setTimeout(() => {
-      const aiResponses = [
-        "Based on research, GLP-1 medications can help reduce appetite and food cravings, which may contribute to weight loss.",
-        "It's common to experience some nausea when starting GLP-1 medications. Try eating smaller meals and staying hydrated.",
-        "Protein is important while on GLP-1 medications. Aim for at least 1.2-1.5g per kg of body weight daily.",
-        "Regular physical activity can enhance the effects of GLP-1 medications. Even walking 30 minutes daily can help.",
-        "Side effects typically improve over time as your body adjusts to the medication.",
-        "Staying hydrated is especially important while on GLP-1 medications.",
-        "If you're experiencing persistent side effects, it's best to consult with your healthcare provider."
-      ];
-      
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-      
+    try {
+      const res = await fetch('http://localhost:5000/gemini-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage.text, user_id: user.id })
+      });
+      const data = await res.json();
       const aiMessage: ChatMessage = {
-        id: Date.now().toString(),
-        text: randomResponse,
+        id: Date.now().toString() + '-ai',
+        text: data.content || 'Sorry, I could not process your request.',
         isUser: false,
         timestamp: new Date()
       };
-      
       setMessages(prevMessages => [...prevMessages, aiMessage]);
-    }, 1000);
+    } catch (err) {
+      const aiMessage: ChatMessage = {
+        id: Date.now().toString() + '-ai',
+        text: 'Sorry, there was an error connecting to the AI assistant.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prevMessages => [...prevMessages, aiMessage]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Render chat message item
@@ -362,7 +444,7 @@ export default function CoachScreen() {
                 <CircularProgress
                   size={40}
                   strokeWidth={4}
-                  progress={dailyLog.fruitsVeggiesServings / 5 * 100}
+                  progress={(dailyLog?.fruitsVeggiesServings ?? 0) / 5 * 100}
                   color={themeColors.fruits}
                   backgroundColor={themeColors.border}
                 >
@@ -371,7 +453,7 @@ export default function CoachScreen() {
                 <View style={styles.trackerTitleContent}>
                   <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Fruits & Veggies</Text>
                   <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}>
-                    {dailyLog.fruitsVeggiesServings} / 5 servings
+                    {(dailyLog?.fruitsVeggiesServings ?? 0)} / 5 servings
                   </Text>
                 </View>
               </View>
@@ -390,7 +472,7 @@ export default function CoachScreen() {
                 <CircularProgress
                   size={40}
                   strokeWidth={4}
-                  progress={dailyLog.proteinGrams / 100 * 100}
+                  progress={(dailyLog?.proteinGrams ?? 0) / 100 * 100}
                   color={themeColors.protein}
                   backgroundColor={themeColors.border}
                 >
@@ -399,7 +481,7 @@ export default function CoachScreen() {
                 <View style={styles.trackerTitleContent}>
                   <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Protein</Text>
                   <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}>
-                    {dailyLog.proteinGrams} / 100 grams
+                    {(dailyLog?.proteinGrams ?? 0)} / 100 grams
                   </Text>
                 </View>
               </View>
@@ -418,7 +500,7 @@ export default function CoachScreen() {
                 <CircularProgress
                   size={40}
                   strokeWidth={4}
-                  progress={dailyLog.steps / 10000 * 100}
+                  progress={(dailyLog?.steps ?? 0) / 10000 * 100}
                   color={themeColors.steps}
                   backgroundColor={themeColors.border}
                 >
@@ -427,7 +509,7 @@ export default function CoachScreen() {
                 <View style={styles.trackerTitleContent}>
                   <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Steps</Text>
                   <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}>
-                    {dailyLog.steps.toLocaleString()} / 10,000 steps
+                    {(dailyLog?.steps ?? 0).toLocaleString()} / 10,000 steps
                   </Text>
                 </View>
               </View>
@@ -467,6 +549,32 @@ export default function CoachScreen() {
               </TouchableOpacity>
             </View>
           </Card>
+
+          <Card style={[styles.trackerCard, { backgroundColor: themeColors.card }]}> 
+            <View style={styles.trackerHeader}>
+              <View style={styles.trackerTitleContainer}>
+                <CircularProgress
+                  size={40}
+                  strokeWidth={4}
+                  progress={(dailyLog?.waterOz ?? 0) / 64 * 100}
+                  color={themeColors.primary}
+                  backgroundColor={themeColors.border}
+                >
+                  <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>💧</Text>
+                </CircularProgress>
+                <View style={styles.trackerTitleContent}>
+                  <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Water</Text>
+                  <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}> {(dailyLog?.waterOz ?? 0)} / 64 oz</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => handleAddPress('water')}
+              >
+                <Plus size={20} color={themeColors.card} />
+              </TouchableOpacity>
+            </View>
+          </Card>
         </View>
       </ScrollView>
       
@@ -489,10 +597,14 @@ export default function CoachScreen() {
             {renderModalContent()}
             
             <Button
-              title="Save"
+              title={modalLoading ? 'Saving...' : 'Save'}
               onPress={handleSave}
               style={styles.saveButton}
+              disabled={modalLoading}
             />
+            {modalError && (
+              <Text style={{ color: Colors.error, textAlign: 'center', marginTop: 8 }}>{modalError}</Text>
+            )}
           </View>
         </View>
       </Modal>
@@ -608,6 +720,12 @@ export default function CoachScreen() {
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
           
+          {loading && (
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: themeColors.textTertiary }}>AI is typing...</Text>
+            </View>
+          )}
+          
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
@@ -627,7 +745,7 @@ export default function CoachScreen() {
             <TouchableOpacity 
               style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
               onPress={handleSendMessage}
-              disabled={inputMessage.trim() === ''}
+              disabled={inputMessage.trim() === '' || loading}
             >
               <Send size={20} color={themeColors.card} />
             </TouchableOpacity>

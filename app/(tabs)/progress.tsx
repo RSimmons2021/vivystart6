@@ -20,9 +20,9 @@ import {
 import { Card } from '@/components/Card';
 import { MultiRingProgress } from '@/components/MultiRingProgress';
 import { WeightChart } from '@/components/WeightChart';
-import { useHealthStore } from '@/store/health-store';
 import { useUserStore } from '@/store/user-store';
 import { useThemeStore } from '@/store/theme-store';
+import { useHealthStore } from '@/store/health-store';
 import Colors from '@/constants/colors';
 import { format, startOfWeek, endOfWeek, parseISO, subDays } from 'date-fns';
 
@@ -35,58 +35,70 @@ export default function ProgressScreen() {
   const { isDarkMode } = useThemeStore();
   const { weightUnit } = useUserStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  
-  const { 
-    weightLogs, 
-    getWeeklyScore, 
-    getWeightLoss,
-    meals,
-    addMeal
-  } = useHealthStore();
-  
+  const { meals, addMeal, weightLogs, addWeightLog } = useHealthStore();
+
+  // Meals state (local, or refactor to API if needed)
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [modalVisible, setModalVisible] = useState(false);
   const [mealModalVisible, setMealModalVisible] = useState(false);
-  
-  const today = new Date();
-  const weekStart = format(startOfWeek(today), 'yyyy-MM-dd');
-  const weekEnd = format(endOfWeek(today), 'yyyy-MM-dd');
-  const weeklyScore = getWeeklyScore(weekStart, weekEnd);
-  const weightLoss = getWeightLoss();
-  
-  // Convert weight loss to the selected unit
-  const convertedWeightLoss = {
-    total: weightUnit === 'lbs' 
-      ? kgToLbs(weightLoss.total)
-      : Math.round(weightLoss.total),
-    percentage: Math.round(weightLoss.percentage)
+
+  // Add new weight log
+  const handleAddWeight = async (weight: number, date: string) => {
+    if (!user?.id) return;
+    try {
+      await addWeightLog({ date, weight });
+    } catch {
+      console.error('Failed to add weight log.');
+    }
   };
-  
-  const handleAddMeal = () => {
-    // In a real app, this would open the camera or image picker
-    // For this demo, we'll just add a mock meal
-    const newMeal = {
-      id: Date.now().toString(),
-      date: format(new Date(), 'yyyy-MM-dd'),
-      time: format(new Date(), 'HH:mm'),
-      name: 'Healthy Meal',
-      description: 'A balanced meal with protein and vegetables',
-      imageUri: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-      fruitsVeggies: 2,
-      protein: 25,
-      calories: 450,
-      carbs: 30,
-      fat: 15,
-    };
-    
-    addMeal(newMeal);
+
+  const handleAddMeal = async () => {
     setMealModalVisible(false);
+    try {
+      await addMeal({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        time: format(new Date(), 'HH:mm'),
+        name: 'Healthy Meal',
+        description: 'A balanced meal with protein and vegetables',
+        imageUri: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+        fruitsVeggies: 2,
+        protein: 25,
+        calories: 450,
+        carbs: 30,
+        fat: 15,
+      });
+    } catch (e) {
+      console.error('Failed to add meal.');
+    }
   };
   
   const recentMeals = [...meals]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
   
+  // Calculate weekly score (fruitsVeggies, protein, steps, overall)
+  const today = new Date();
+  const weekStart = format(startOfWeek(today), 'yyyy-MM-dd');
+  const weekEnd = format(endOfWeek(today), 'yyyy-MM-dd');
+  const weeklyProgress = meals.filter(m => m.date >= weekStart && m.date <= weekEnd);
+  const weeklyScore = {
+    fruitsVeggies: Math.round((weeklyProgress.reduce((sum, m) => sum + (m.fruitsVeggies || 0), 0) / (5 * weeklyProgress.length || 1)) * 100),
+    protein: Math.round((weeklyProgress.reduce((sum, m) => sum + (m.protein || 0), 0) / (100 * weeklyProgress.length || 1)) * 100),
+    steps: Math.round((weeklyProgress.reduce((sum, m) => sum + (m.steps || 0), 0) / (10000 * weeklyProgress.length || 1)) * 100),
+    overall: 0
+  };
+  weeklyScore.overall = Math.round((weeklyScore.fruitsVeggies + weeklyScore.protein + weeklyScore.steps) / 3);
+
+  // Weight loss calculation
+  const startWeight = user?.startWeight || 0;
+  const latestWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : startWeight;
+  const weightLoss = startWeight - latestWeight;
+  const percentageLoss = startWeight ? (weightLoss / startWeight) * 100 : 0;
+  const convertedWeightLoss = {
+    total: weightUnit === 'lbs' ? kgToLbs(weightLoss) : Math.round(weightLoss),
+    percentage: Math.round(percentageLoss)
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
       <View style={styles.header}>

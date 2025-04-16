@@ -1,0 +1,133 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Front-end Development Guidelines
+
+## Code Organization
+
+### Component Structure
+```
+components/
+  common/     # Reusable components
+  features/   # Feature-specific components
+  layouts/    # Layout components
+  screens/    # Screen components
+```
+
+### Styling Guidelines
+- Use StyleSheet.create for all styles
+- Follow atomic design principles
+- Maintain consistent color scheme:
+  ```javascript
+  const colors = {
+    primary: '#2563eb',
+    secondary: '#64748b',
+    background: '#f8fafc',
+    success: '#90EE90',
+    error: '#FF6B6B',
+    text: {
+      primary: '#1e293b',
+      secondary: '#64748b',
+    }
+  }
+  ```
+
+## Component Guidelines
+
+### Best Practices
+1. Use functional components with hooks
+2. Implement error boundaries
+3. Optimize re-renders using useMemo and useCallback
+4. Maintain proper TypeScript typing
+5. Follow component naming conventions
+
+### Component Template
+```typescript
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+
+interface ComponentProps {
+  // Props definition
+}
+
+export const Component: React.FC<ComponentProps> = ({ props }) => {
+  // State and hooks
+  
+  // Event handlers
+  
+  // Render methods
+  
+  return (
+    <View style={styles.container}>
+      {/* Component content */}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  // Component styles
+});
+```
+
+## State Management
+- Use React hooks for local state
+- Follow state immutability patterns
+- Implement proper loading states
+- Handle error states consistently
+
+## Navigation Guidelines
+- Use Expo Router for navigation
+- Maintain clear route naming
+- Implement proper deep linking
+- Handle navigation state persistence
+
+## Performance Guidelines
+1. Implement list virtualization
+2. Optimize image loading
+3. Use proper memoization
+4. Implement proper error boundaries
+5. Handle offline functionality
+
+## Testing Guidelines
+1. Write component unit tests
+2. Implement integration tests
+3. Use React Native Testing Library
+4. Test error scenarios
+5. Maintain good test coverage
+
+## Accessibility Guidelines
+1. Implement proper keyboard navigation
+2. Use semantic HTML elements
+3. Provide alternative text for images
+4. Support screen readers
+5. Test with accessibility tools
+
+## Animation Guidelines
+1. Use React Native Reanimated
+2. Implement smooth transitions
+3. Handle gesture interactions
+4. Optimize animation performance
+5. Follow iOS/Android guidelines
+
+## Form Handling
+1. Implement proper validation
+2. Show clear error messages
+3. Handle submission states
+4. Support form autofill
+5. Implement proper keyboard handling
+
+## API Integration
+1. Use proper error handling
+2. Implement loading states
+3. Handle offline scenarios
+4. Cache API responses
+5. Implement retry logic
+
+## Code Quality
+1. Use ESLint for code linting
+2. Follow Prettier formatting
+3. Maintain consistent naming
+4. Write proper documentation
+5. Follow TypeScript best practices
