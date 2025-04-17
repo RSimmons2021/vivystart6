@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -29,7 +29,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthProvider'; // Correct import
 
 export default function SettingsScreen() {
-  const { user, setOnboarded, weightUnit, toggleWeightUnit } = useUserStore();
+  const { user, weightUnit, toggleWeightUnit, fetchUser } = useUserStore();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const { level, points, getUnlockedAchievements } = useGamificationStore();
   const router = useRouter();
@@ -48,8 +48,7 @@ export default function SettingsScreen() {
     if (typeof logout === 'function') {
       await logout();
     }
-    setOnboarded(false);
-    router.replace('/onboarding');
+    router.replace('/login'); // Go to login, not onboarding
   };
   
   const toggleNotifications = () => {
@@ -63,6 +62,10 @@ export default function SettingsScreen() {
   const navigateToChallenges = () => {
     router.push('/challenges');
   };
+  
+  useEffect(() => {
+    if (user?.id) fetchUser(user.id);
+  }, [user?.id]);
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>

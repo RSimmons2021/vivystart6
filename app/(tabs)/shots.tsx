@@ -128,19 +128,20 @@ export default function ShotsScreen() {
     deleteSideEffect, 
     setShots, 
     setWeightLogs, 
-    setSideEffects 
+    setSideEffects,
+    fetchShots,
+    fetchWeightLogs,
+    fetchSideEffects
   } = useHealthStore();
-
-  // API-backed state
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'shots' | 'weight' | 'sideEffects'>('shots');
-  
-  // Shot modal state
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [shotModalVisible, setShotModalVisible] = useState(false);
+  const [weightModalVisible, setWeightModalVisible] = useState(false);
+  const [sideEffectModalVisible, setSideEffectModalVisible] = useState(false);
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
@@ -148,19 +149,43 @@ export default function ShotsScreen() {
   const [customMedication, setCustomMedication] = useState('');
   const [customDosage, setCustomDosage] = useState('');
   const [showMedicationDropdown, setShowMedicationDropdown] = useState(false);
-  
-  // Weight modal state
-  const [weightModalVisible, setWeightModalVisible] = useState(false);
   const [weight, setWeight] = useState('');
-  
-  // Side effects modal state
-  const [sideEffectModalVisible, setSideEffectModalVisible] = useState(false);
   const [selectedSideEffect, setSelectedSideEffect] = useState(COMMON_SIDE_EFFECTS[0]);
   const [customSideEffect, setCustomSideEffect] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState(SEVERITY_LEVELS[0]);
   const [sideEffectNotes, setSideEffectNotes] = useState('');
   const [showSideEffectDropdown, setShowSideEffectDropdown] = useState(false);
-  
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    (async () => {
+      await Promise.all([
+        fetchShots(),
+        fetchWeightLogs(),
+        fetchSideEffects()
+      ]);
+      setLoading(false);
+    })();
+  }, [user?.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>User not found</Text>
+      </View>
+    );
+  }
+
+  // API-backed state
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -177,19 +202,8 @@ export default function ShotsScreen() {
     setSelectedDate(date);
   };
 
-  // Fetch all data for selected month on mount or when user/selectedDate changes
-  useEffect(() => {
-    if (!user?.id) return;
-    setLoading(true);
-    setShots([]);
-    setWeightLogs([]);
-    setSideEffects([]);
-    setLoading(false);
-  }, [user?.id]);
-
   // Add loading and error state for actions
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  
 
   // Shot handlers
   const openShotModal = () => {
@@ -246,9 +260,7 @@ export default function ShotsScreen() {
     setActionLoading(true);
     setActionError(null);
     try {
-      const weightInKg = weightUnit === 'lbs' 
-        ? lbsToKg(parseFloat(weight)) 
-        : parseFloat(weight);
+      const weightInKg = parseFloat(weight);
       await addWeightLog({
         date: format(selectedDate, 'yyyy-MM-dd'),
         weight: weightInKg,

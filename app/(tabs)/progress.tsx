@@ -35,9 +35,8 @@ export default function ProgressScreen() {
   const { isDarkMode } = useThemeStore();
   const { weightUnit } = useUserStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  const { meals, addMeal, weightLogs, addWeightLog } = useHealthStore();
-
-  // Meals state (local, or refactor to API if needed)
+  const { meals, addMeal, weightLogs, addWeightLog, fetchWeightLogs, fetchDailyLogs, fetchStepLogs } = useHealthStore();
+  const [loading, setLoading] = useState(false);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [modalVisible, setModalVisible] = useState(false);
   const [mealModalVisible, setMealModalVisible] = useState(false);
@@ -98,6 +97,44 @@ export default function ProgressScreen() {
     total: weightUnit === 'lbs' ? kgToLbs(weightLoss) : Math.round(weightLoss),
     percentage: Math.round(percentageLoss)
   };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    (async () => {
+      await Promise.all([
+        fetchWeightLogs(),
+        fetchDailyLogs(),
+        fetchStepLogs()
+      ]);
+      setLoading(false);
+    })();
+  }, [user?.id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: themeColors.text }]}>Progress</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Loading...</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: themeColors.text }]}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: themeColors.text }]}>Progress</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>No user found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
@@ -720,5 +757,13 @@ const styles = StyleSheet.create({
   mealOptionText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 24,
   },
 });

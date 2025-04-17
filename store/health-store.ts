@@ -59,6 +59,14 @@ interface HealthState {
   getDailyLog: (date: string) => Promise<DailyLog | undefined>;
   updateDailyLog: (date: string, data: Partial<Omit<DailyLog, 'id' | 'date'>>) => void;
   
+  // Fetch methods
+  fetchWeightLogs: () => void;
+  fetchShots: () => void;
+  fetchSideEffects: () => void;
+  fetchWaterLogs: () => void;
+  fetchStepLogs: () => void;
+  fetchDailyLogs: () => void;
+  
   // Calculations
   getWeeklyScore: (startDate: string, endDate: string) => WeeklyScore;
   getWeightLoss: () => { total: number; percentage: number };
@@ -454,6 +462,86 @@ export const useHealthStore = create<HealthState>()(
           if (error) throw error;
           // Optionally refetch daily log
           // (You can add logic here to update Zustand state if needed)
+        } catch (e) { /* handle error */ }
+      },
+      
+      // Fetch methods
+      fetchWeightLogs: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('weight_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ weightLogs: data.map((log: any) => ({ ...log, date: ensureString(log.date), weight: log.weight ?? 0 })) });
+        } catch (e) { /* handle error */ }
+      },
+      fetchShots: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('shots')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ shots: data.map((shot: any) => ({ ...shot, date: ensureString(shot.date), time: ensureString(shot.time) })) });
+        } catch (e) { /* handle error */ }
+      },
+      fetchSideEffects: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('side_effects')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ sideEffects: data.map((effect: any) => ({ ...effect, date: ensureString(effect.date), type: ensureString(effect.type), severity: effect.severity ?? 'mild' })) });
+        } catch (e) { /* handle error */ }
+      },
+      fetchWaterLogs: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('water_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ waterLogs: data.map((log: any) => ({ ...log, date: ensureString(log.date), amount: log.amount ?? 0 })) });
+        } catch (e) { /* handle error */ }
+      },
+      fetchStepLogs: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('step_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ stepLogs: data.map((log: any) => ({ ...log, date: ensureString(log.date), steps: log.steps ?? 0 })) });
+        } catch (e) { /* handle error */ }
+      },
+      fetchDailyLogs: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('daily_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ dailyLogs: data.map((log: any) => ({ ...log, date: ensureString(log.date) })) });
         } catch (e) { /* handle error */ }
       },
       

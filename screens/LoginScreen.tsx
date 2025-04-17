@@ -17,9 +17,11 @@ export default function LoginScreen() {
       return;
     }
     if (mode === 'login') {
+      console.log('[LoginScreen] Attempting login for:', email);
       await login(email, password);
       // Get the logged in user
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('[LoginScreen] supabase.auth.getUser() result:', user);
       if (!user) {
         alert('Could not get user');
         return;
@@ -30,12 +32,13 @@ export default function LoginScreen() {
         .select('onboarded')
         .eq('id', user.id)
         .single();
-
+      console.log('[LoginScreen] Fetched user row:', data, 'Error:', error);
       // If row doesn't exist, create it and treat as new user
       if (error && (error.code === 'PGRST116' || error.message.includes('0 rows'))) {
         const { error: insertError } = await supabase
           .from('users')
           .insert({ id: user.id, email: user.email, onboarded: false });
+        console.log('[LoginScreen] Inserted new user row. Error:', insertError);
         if (insertError) {
           alert('Could not create user profile');
           return;
@@ -45,14 +48,18 @@ export default function LoginScreen() {
       }
       if (error) {
         alert('Failed to fetch user profile');
+        console.log('[LoginScreen] Failed to fetch user profile. Error:', error);
         return;
       }
       if (data?.onboarded) {
+        console.log('[LoginScreen] User is onboarded. Navigating to (tabs)');
         router.replace('/(tabs)');
       } else {
+        console.log('[LoginScreen] User is NOT onboarded. Navigating to onboarding');
         router.replace('/onboarding');
       }
     } else {
+      console.log('[LoginScreen] Register mode for:', email);
       await register(email, password);
       // After registration, always go to onboarding
       router.replace('/onboarding');

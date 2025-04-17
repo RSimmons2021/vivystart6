@@ -45,12 +45,18 @@ interface ChatMessage {
 }
 
 export default function CoachScreen() {
-  const { user } = useUserStore();
+  const { user, fetchUser } = useUserStore();
   const { isDarkMode } = useThemeStore();
   const { 
     addWeightLog, 
     getDailyLog, 
-    updateDailyLog 
+    updateDailyLog,
+    fetchWeightLogs,
+    fetchShots,
+    fetchSideEffects,
+    fetchWaterLogs,
+    fetchStepLogs,
+    fetchDailyLogs
   } = useHealthStore();
   
   const [modalVisible, setModalVisible] = useState(false);
@@ -85,14 +91,33 @@ export default function CoachScreen() {
   const [dailyLog, setDailyLog] = useState<DailyLog | undefined>(undefined);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!user?.id) return;
+    setLoading(true);
+    (async () => {
+      await Promise.all([
+        fetchWeightLogs(),
+        fetchShots(),
+        fetchSideEffects(),
+        fetchWaterLogs(),
+        fetchStepLogs(),
+        fetchDailyLogs()
+      ]);
+      setLoading(false);
+    })();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
     (async () => {
       const log = await getDailyLog(today);
-      if (isMounted) setDailyLog(log);
+      setDailyLog(log);
     })();
-    return () => { isMounted = false; };
-  }, [today, getDailyLog]);
-  
+  }, [today, getDailyLog, user?.id]);
+
+  useEffect(() => {
+    if (user?.id) fetchUser(user.id);
+  }, [user?.id]);
+
   // Calendar related functions
   const monthStart = startOfMonth(calendarDate);
   const monthEnd = endOfMonth(calendarDate);
@@ -407,6 +432,14 @@ export default function CoachScreen() {
       </Text>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
