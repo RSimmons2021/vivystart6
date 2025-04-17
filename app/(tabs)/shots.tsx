@@ -157,6 +157,7 @@ export default function ShotsScreen() {
   const [selectedSeverity, setSelectedSeverity] = useState(SEVERITY_LEVELS[0]);
   const [sideEffectNotes, setSideEffectNotes] = useState('');
   const [showSideEffectDropdown, setShowSideEffectDropdown] = useState(false);
+  const [pendingDeleteWeightId, setPendingDeleteWeightId] = useState<string | null>(null);
 
   // Helper functions moved here before use
   const getShotsForDate = (date: Date) => {
@@ -642,7 +643,7 @@ export default function ShotsScreen() {
                 selectedDateWeight.map((log, index) => (
                   <Card key={index} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
-                      <TouchableOpacity onPress={() => handleDeleteWeight(log.id)}>
+                      <TouchableOpacity onPress={() => setPendingDeleteWeightId(log.id)}>
                         <X size={22} color="#FF3B30" />
                       </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
@@ -995,6 +996,34 @@ export default function ShotsScreen() {
           </View>
         </View>
       </Modal>
+      
+      {/* Delete Weight Confirmation Modal */}
+      <Modal
+        visible={!!pendingDeleteWeightId}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingDeleteWeightId(null)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={[styles.confirmBox, { backgroundColor: themeColors.card }]}>
+            <Text style={[styles.confirmText, { color: themeColors.text }]}>Are you sure you want to delete this entry?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24 }}>
+              <TouchableOpacity onPress={() => setPendingDeleteWeightId(null)} style={[styles.confirmCancelBtn, { backgroundColor: themeColors.backgroundSecondary }]}>
+                <Text style={[styles.confirmCancelText, { color: themeColors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (pendingDeleteWeightId) await handleDeleteWeight(pendingDeleteWeightId);
+                  setPendingDeleteWeightId(null);
+                }}
+                style={[styles.confirmDeleteBtn, { backgroundColor: '#FF3B30' }]}
+              >
+                <Text style={styles.confirmDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1254,5 +1283,44 @@ const styles = StyleSheet.create({
   },
   severityCheckIcon: {
     marginLeft: 6,
+  },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmBox: {
+    backgroundColor: '#fff',
+    padding: 28,
+    borderRadius: 16,
+    minWidth: 260,
+    alignItems: 'center',
+  },
+  confirmText: {
+    fontSize: 18,
+    color: '#333',
+    textAlign: 'center',
+  },
+  confirmCancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    marginRight: 8,
+    borderRadius: 6,
+    backgroundColor: '#ddd',
+  },
+  confirmCancelText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  confirmDeleteBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 6,
+    backgroundColor: '#FF3B30',
+  },
+  confirmDeleteText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
