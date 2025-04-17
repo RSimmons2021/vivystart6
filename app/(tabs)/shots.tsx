@@ -16,7 +16,7 @@ import {
   Syringe, 
   Scale, 
   Activity, 
-  X, 
+  X,
   Plus,
   ChevronDown,
   ThermometerSun,
@@ -562,15 +562,18 @@ export default function ShotsScreen() {
                 selectedDateShots.map(shot => (
                   <Card key={shot.id} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
+                      <TouchableOpacity 
+                        style={[styles.deleteButton, { paddingHorizontal: 16, paddingVertical: 12 }]}
+                        onPress={() => handleDeleteShot(shot.id)}
+                      >
+                        <Text style={styles.deleteIcon}>×</Text>
+                      </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
                         <Syringe size={18} color="#9c5dc0" />
                         <Text style={[styles.dataCardTitleText, { color: themeColors.text }]}>
                           {shot.medication}
                         </Text>
                       </View>
-                      <TouchableOpacity onPress={() => handleDeleteShot(shot.id)}>
-                        <X size={18} color={themeColors.textTertiary} />
-                      </TouchableOpacity>
                     </View>
                     
                     <View style={styles.dataCardDetails}>
@@ -639,15 +642,15 @@ export default function ShotsScreen() {
                 selectedDateWeight.map((log, index) => (
                   <Card key={index} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
+                      <TouchableOpacity onPress={() => handleDeleteWeight(log.id)}>
+                        <X size={22} color="#FF3B30" />
+                      </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
                         <Scale size={18} color="#e84393" />
                         <Text style={[styles.dataCardTitleText, { color: themeColors.text }]}>
                           {displayWeight(log.weight)}
                         </Text>
                       </View>
-                      <TouchableOpacity onPress={() => handleDeleteWeight(log.id)}>
-                        <X size={18} color={themeColors.textTertiary} />
-                      </TouchableOpacity>
                     </View>
                     
                     {log.notes && (
@@ -694,15 +697,15 @@ export default function ShotsScreen() {
                 selectedDateSideEffects.map((effect, index) => (
                   <Card key={index} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
+                      <TouchableOpacity onPress={() => handleDeleteSideEffect(effect.id)}>
+                        <X size={18} color={themeColors.textTertiary} />
+                      </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
                         <ThermometerSun size={18} color="#0984e3" />
                         <Text style={[styles.dataCardTitleText, { color: themeColors.text }]}>
                           {effect.type} - {effect.severity.charAt(0).toUpperCase() + effect.severity.slice(1)}
                         </Text>
                       </View>
-                      <TouchableOpacity onPress={() => handleDeleteSideEffect(effect.id)}>
-                        <X size={18} color={themeColors.textTertiary} />
-                      </TouchableOpacity>
                     </View>
                     
                     {effect.notes && (
@@ -1120,6 +1123,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  deleteButton: {
+    marginRight: 20,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  deleteIcon: {
+    fontSize: 22,
+    fontWeight: 'bold',
   },
   dataCardTitle: {
     flexDirection: 'row',
