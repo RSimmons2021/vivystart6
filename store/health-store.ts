@@ -226,7 +226,7 @@ export const useHealthStore = create<HealthState>()(
         try {
           const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, time: data.time ? ensureString(data.time) : undefined, user_id: user.id };
           const { error } = await supabase
-            .from('shot')
+            .from('shots')
             .update([updateData]).eq('id', id);
           if (error) throw error;
           set((state) => ({ shots: state.shots.map(shot => shot.id === id ? { ...shot, ...updateData, date: ensureString(updateData.date), time: ensureString(updateData.time) } : shot) }));
@@ -241,7 +241,7 @@ export const useHealthStore = create<HealthState>()(
         if (!user?.id) return;
         try {
           const { error } = await supabase
-            .from('shot')
+            .from('shots')
             .delete()
             .eq('id', id)
             .eq('user_id', user.id);

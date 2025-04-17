@@ -124,6 +124,7 @@ export default function ShotsScreen() {
     deleteShot, 
     weightLogs, 
     addWeightLog, 
+    deleteWeightLog,
     sideEffects, 
     addSideEffect, 
     deleteSideEffect, 
@@ -300,9 +301,22 @@ export default function ShotsScreen() {
     setActionError(null);
     try {
       await deleteShot(id);
-      await fetchShots(); // Refresh shots after delete
+      setShots(shots => shots.filter(shot => shot.id !== id));
     } catch (e) {
       setActionError('Failed to delete shot.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteWeight = async (id: string) => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await deleteWeightLog(id);
+      setWeightLogs(weightLogs => weightLogs.filter(log => log.id !== id));
+    } catch (e) {
+      setActionError('Failed to delete weight log.');
     } finally {
       setActionLoading(false);
     }
@@ -631,6 +645,9 @@ export default function ShotsScreen() {
                           {displayWeight(log.weight)}
                         </Text>
                       </View>
+                      <TouchableOpacity onPress={() => handleDeleteWeight(log.id)}>
+                        <X size={18} color={themeColors.textTertiary} />
+                      </TouchableOpacity>
                     </View>
                     
                     {log.notes && (
