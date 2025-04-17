@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -40,6 +40,7 @@ import {
   parseISO,
   isToday
 } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 
 // Conversion functions
 const kgToLbs = (kg: number) => Math.round(kg * 2.20462);
@@ -156,6 +157,32 @@ export default function ShotsScreen() {
   const [sideEffectNotes, setSideEffectNotes] = useState('');
   const [showSideEffectDropdown, setShowSideEffectDropdown] = useState(false);
 
+  // Helper functions moved here before use
+  const getShotsForDate = (date: Date) => {
+    return shots.filter(shot => {
+      const shotDate = parseISO(shot.date);
+      return isSameDay(shotDate, date);
+    });
+  };
+  
+  const getWeightForDate = (date: Date) => {
+    return weightLogs.filter(log => {
+      const logDate = parseISO(log.date);
+      return isSameDay(logDate, date);
+    });
+  };
+  
+  const getSideEffectsForDate = (date: Date) => {
+    return sideEffects.filter(effect => {
+      const effectDate = parseISO(effect.date);
+      return isSameDay(effectDate, date);
+    });
+  };
+
+  const selectedDateShots = useMemo(() => getShotsForDate(selectedDate), [shots, selectedDate]);
+  const selectedDateWeight = useMemo(() => getWeightForDate(selectedDate), [weightLogs, selectedDate]);
+  const selectedDateSideEffects = useMemo(() => getSideEffectsForDate(selectedDate), [sideEffects, selectedDate]);
+
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
@@ -168,6 +195,21 @@ export default function ShotsScreen() {
       setLoading(false);
     })();
   }, [user?.id]);
+
+  useEffect(() => {
+    console.log('===== DEBUG OUTPUT =====');
+    console.log('Current user:', user?.id);
+    console.log('Shots count:', shots.length);
+    console.log('Weight logs count:', weightLogs.length);
+    console.log('Side effects count:', sideEffects.length);
+    console.log('Selected date:', selectedDate);
+    console.log('Filtered shots:', selectedDateShots);
+    console.log('Filtered weight:', selectedDateWeight);
+    console.log('Filtered side effects:', selectedDateSideEffects);
+    
+    // Health store already verifies Supabase connection
+    console.log('Store state:', useHealthStore.getState());
+  }, [shots, weightLogs, sideEffects, selectedDate]);
 
   if (loading) {
     return (
@@ -217,21 +259,37 @@ export default function ShotsScreen() {
   };
   
   const handleAddShot = async () => {
+    if (!time) {
+      setActionError('Please enter a time');
+      return;
+    }
+    
+    // Format time as HH:MM if it's just a number
+    const formattedTime = time.includes(':') ? time : `${time.padStart(2, '0')}:00`;
+    
     setActionLoading(true);
     setActionError(null);
+    
     try {
+      const medication = selectedMedication.id === 'other' 
+        ? `${customMedication} ${customDosage}`.trim() 
+        : `${selectedMedication.name} ${selectedMedication.dosage}`;
+      
       await addShot({
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        time,
+        date: selectedDate.toISOString(),
+        time: formattedTime,
         location,
         notes,
-        medication: selectedMedication.id === 'other' 
-          ? `${customMedication} ${customDosage}`
-          : `${selectedMedication.name} ${selectedMedication.dosage}`
+        medication
       });
+      
+      setTime('');
+      setLocation('');
+      setNotes('');
       setShotModalVisible(false);
-    } catch (e) {
-      setActionError('Failed to add shot.');
+    } catch (error) {
+      console.error('Error adding shot:', error);
+      setActionError('Failed to add shot');
     } finally {
       setActionLoading(false);
     }
@@ -242,6 +300,7 @@ export default function ShotsScreen() {
     setActionError(null);
     try {
       await deleteShot(id);
+      await fetchShots(); // Refresh shots after delete
     } catch (e) {
       setActionError('Failed to delete shot.');
     } finally {
@@ -260,12 +319,14 @@ export default function ShotsScreen() {
     setActionLoading(true);
     setActionError(null);
     try {
-      const weightInKg = parseFloat(weight);
+      // Always store weight in kg
+      const weightInKg = weightUnit === 'lbs' ? lbsToKg(parseFloat(weight)) : parseFloat(weight);
       await addWeightLog({
         date: format(selectedDate, 'yyyy-MM-dd'),
         weight: weightInKg,
         notes: ''
       });
+      await fetchWeightLogs(); // Refresh weight logs after add
       setWeightModalVisible(false);
     } catch (e) {
       setActionError('Failed to add weight log.');
@@ -295,6 +356,7 @@ export default function ShotsScreen() {
         severity: selectedSeverity.id as 'mild' | 'moderate' | 'severe',
         notes: sideEffectNotes
       });
+      await fetchSideEffects(); // Refresh side effects after add
       setSideEffectModalVisible(false);
     } catch (e) {
       setActionError('Failed to add side effect.');
@@ -308,6 +370,7 @@ export default function ShotsScreen() {
     setActionError(null);
     try {
       await deleteSideEffect(id);
+      await fetchSideEffects(); // Refresh side effects after delete
     } catch (e) {
       setActionError('Failed to delete side effect.');
     } finally {
@@ -316,31 +379,6 @@ export default function ShotsScreen() {
   };
 
   // Data retrieval functions
-  const getShotsForDate = (date: Date) => {
-    return shots.filter(shot => {
-      const shotDate = parseISO(shot.date);
-      return isSameDay(shotDate, date);
-    });
-  };
-  
-  const getWeightForDate = (date: Date) => {
-    return weightLogs.filter(log => {
-      const logDate = parseISO(log.date);
-      return isSameDay(logDate, date);
-    });
-  };
-  
-  const getSideEffectsForDate = (date: Date) => {
-    return sideEffects.filter(effect => {
-      const effectDate = parseISO(effect.date);
-      return isSameDay(effectDate, date);
-    });
-  };
-  
-  const selectedDateShots = getShotsForDate(selectedDate);
-  const selectedDateWeight = getWeightForDate(selectedDate);
-  const selectedDateSideEffects = getSideEffectsForDate(selectedDate);
-  
   const hasShot = (date: Date) => {
     return shots.some(shot => {
       const shotDate = parseISO(shot.date);
@@ -500,6 +538,11 @@ export default function ShotsScreen() {
                   <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                     No shots recorded for this date
                   </Text>
+                  {__DEV__ && (
+                    <Text style={{ color: 'red', fontSize: 10 }}>
+                      DEBUG: {JSON.stringify(shots)}
+                    </Text>
+                  )}
                 </View>
               ) : (
                 selectedDateShots.map(shot => (
@@ -572,6 +615,11 @@ export default function ShotsScreen() {
                   <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                     No weight recorded for this date
                   </Text>
+                  {__DEV__ && (
+                    <Text style={{ color: 'red', fontSize: 10 }}>
+                      DEBUG: {JSON.stringify(weightLogs)}
+                    </Text>
+                  )}
                 </View>
               ) : (
                 selectedDateWeight.map((log, index) => (
@@ -619,6 +667,11 @@ export default function ShotsScreen() {
                   <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                     No side effects recorded for this date
                   </Text>
+                  {__DEV__ && (
+                    <Text style={{ color: 'red', fontSize: 10 }}>
+                      DEBUG: {JSON.stringify(sideEffects)}
+                    </Text>
+                  )}
                 </View>
               ) : (
                 selectedDateSideEffects.map((effect, index) => (

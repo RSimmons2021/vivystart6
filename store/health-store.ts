@@ -94,6 +94,10 @@ export const useHealthStore = create<HealthState>()(
       
       // Weight methods
       addWeightLog: async (log: Omit<WeightLog, 'id'>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in addWeightLog');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -122,6 +126,10 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       updateWeightLog: async (id: string, data: Partial<WeightLog>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in updateWeightLog');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -140,6 +148,10 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       deleteWeightLog: async (id: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in deleteWeightLog');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -157,51 +169,79 @@ export const useHealthStore = create<HealthState>()(
       
       // Shot methods
       addShot: async (shot: Omit<Shot, 'id'>) => {
+        console.log('Attempting to add shot:', shot);
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for adding shot');
+          return;
+        }
+        
         try {
-          const newShot = { ...shot, date: ensureString(shot.date), time: ensureString(shot.time), user_id: user.id };
+          // Format time as HH:MM if it's just a number
+          const formattedTime = shot.time.includes(':') ? shot.time : `${shot.time.padStart(2, '0')}:00`;
+          
+          const newShot = { 
+            ...shot,
+            date: ensureString(shot.date),
+            time: formattedTime,
+            user_id: user.id
+          };
+          
+          console.log('Prepared shot data:', newShot);
+          
           const { data, error } = await supabase
             .from('shots')
-            .insert([newShot]);
-          if (error) throw error;
-          const dataArr = data as unknown[];
-          const maybeObj = dataArr[0];
-          if (
-            data &&
-            Array.isArray(data) &&
-            dataArr.length > 0 &&
-            typeof maybeObj === 'object' &&
-            maybeObj !== null &&
-            !Array.isArray(maybeObj)
-          ) {
-            set((state) => ({ shots: [...state.shots, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date), time: ensureString((maybeObj as Record<string, any>).time) }] }));
-            // Optionally update daily log
-            const dailyLog = await get().getDailyLog(newShot.date);
-            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
-              await get().updateDailyLog(newShot.date, { shotTaken: true });
-            }
+            .insert(newShot)
+            .select('*');
+            
+          if (error) {
+            console.error('Shot insertion error:', error);
+            throw error;
           }
-        } catch (e) { /* handle error */ }
+          
+          console.log('Inserted shot data:', data);
+          
+          if (data?.[0]) {
+            const formattedShot = {
+              ...data[0],
+              date: ensureString(data[0].date),
+              time: data[0].time
+            };
+            set(state => ({
+              shots: [...state.shots, formattedShot]
+            }));
+            console.log('Successfully updated local state with new shot');
+          }
+        } catch (e) {
+          console.error('Add shot failed:', e);
+        }
       },
       updateShot: async (id: string, data: Partial<Shot>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in updateShot');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
           const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, time: data.time ? ensureString(data.time) : undefined, user_id: user.id };
           const { error } = await supabase
-            .from('shots')
+            .from('shot')
             .update([updateData]).eq('id', id);
           if (error) throw error;
           set((state) => ({ shots: state.shots.map(shot => shot.id === id ? { ...shot, ...updateData, date: ensureString(updateData.date), time: ensureString(updateData.time) } : shot) }));
         } catch (e) { /* handle error */ }
       },
       deleteShot: async (id: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in deleteShot');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
           const { error } = await supabase
-            .from('shots')
+            .from('shot')
             .delete()
             .eq('id', id)
             .eq('user_id', user.id);
@@ -214,48 +254,54 @@ export const useHealthStore = create<HealthState>()(
       
       // Side effect methods
       addSideEffect: async (effect: Omit<SideEffect, 'id'>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in addSideEffect');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
-          const newEffect = { ...effect, date: ensureString(effect.date), type: ensureString(effect.type), severity: effect.severity ?? 'mild', user_id: user.id };
+          const newEffect = { 
+            ...effect, 
+            date: ensureString(effect.date),
+            user_id: user.id 
+          };
           const { data, error } = await supabase
             .from('side_effects')
-            .insert([newEffect]);
+            .insert([newEffect])
+            .select();
           if (error) throw error;
-          const dataArr = data as unknown[];
-          const maybeObj = dataArr[0];
-          if (
-            data &&
-            Array.isArray(data) &&
-            dataArr.length > 0 &&
-            typeof maybeObj === 'object' &&
-            maybeObj !== null &&
-            !Array.isArray(maybeObj)
-          ) {
-            set((state) => ({ sideEffects: [...state.sideEffects, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date), type: ensureString((maybeObj as Record<string, any>).type) }] }));
-            // Optionally update daily log
-            const dailyLog = await get().getDailyLog(newEffect.date);
-            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null && Array.isArray(dailyLog.sideEffects)) {
-              await get().updateDailyLog(newEffect.date, {
-                sideEffects: [...dailyLog.sideEffects, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date), type: ensureString((maybeObj as Record<string, any>).type) }]
-              });
-            }
+          if (data?.[0]) {
+            set(state => ({ 
+              sideEffects: [...state.sideEffects, {
+                ...data[0],
+                date: ensureString(data[0].date)
+              }]
+            }));
           }
-        } catch (e) { /* handle error */ }
+        } catch (e) { console.error('Add side effect error:', e) }
       },
       updateSideEffect: async (id: string, data: Partial<SideEffect>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in updateSideEffect');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
-          const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, type: data.type ? ensureString(data.type) : undefined, severity: data.severity ?? 'mild', user_id: user.id };
+          const updateData = { ...data, date: data.date ? ensureString(data.date) : undefined, user_id: user.id };
           const { error } = await supabase
             .from('side_effects')
             .update([updateData]).eq('id', id);
           if (error) throw error;
-          set((state) => ({ sideEffects: state.sideEffects.map(effect => effect.id === id ? { ...effect, ...updateData, date: ensureString(updateData.date), type: ensureString(updateData.type) } : effect) }));
+          set((state) => ({ sideEffects: state.sideEffects.map(effect => effect.id === id ? { ...effect, ...updateData, date: ensureString(updateData.date) } : effect) }));
         } catch (e) { /* handle error */ }
       },
       deleteSideEffect: async (id: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in deleteSideEffect');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -280,6 +326,10 @@ export const useHealthStore = create<HealthState>()(
       
       // Meal methods
       addMeal: async (meal: Omit<Meal, 'id'>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in addMeal');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -303,6 +353,10 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       updateMeal: async (id: string, data: Partial<Meal>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in updateMeal');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -318,6 +372,10 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       deleteMeal: async (id: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in deleteMeal');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -331,6 +389,10 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       saveMeal: async (id: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in saveMeal');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -360,6 +422,10 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       unsaveMeal: async (id: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in unsaveMeal');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -381,6 +447,10 @@ export const useHealthStore = create<HealthState>()(
       
       // Water methods
       addWaterLog: async (log: Omit<WaterLog, 'id'>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in addWaterLog');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -409,6 +479,10 @@ export const useHealthStore = create<HealthState>()(
       
       // Step methods
       addStepLog: async (log: Omit<StepLog, 'id'>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in addStepLog');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -437,6 +511,10 @@ export const useHealthStore = create<HealthState>()(
       
       // Daily log methods
       getDailyLog: async (date: string) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in getDailyLog');
+          return undefined;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return undefined;
         try {
@@ -452,6 +530,10 @@ export const useHealthStore = create<HealthState>()(
         return undefined;
       },
       updateDailyLog: async (date: string, data: Partial<Omit<DailyLog, 'id' | 'date'>>) => {
+        if (!supabase) {
+          console.error('Supabase not initialized in updateDailyLog');
+          return;
+        }
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
@@ -467,8 +549,15 @@ export const useHealthStore = create<HealthState>()(
       
       // Fetch methods
       fetchWeightLogs: async () => {
+        if (!supabase) {
+          console.error('Supabase not initialized in fetchWeightLogs');
+          return;
+        }
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for fetchWeightLogs');
+          return;
+        }
         try {
           const { data, error } = await supabase
             .from('weight_logs')
@@ -480,34 +569,70 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       fetchShots: async () => {
+        console.log('Fetching shots for user:', useUserStore.getState().user?.id);
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for shots fetch');
+          return;
+        }
+        
         try {
           const { data, error } = await supabase
             .from('shots')
             .select('*')
             .eq('user_id', user.id)
             .order('date', { ascending: false });
-          if (error) throw error;
-          if (data) set({ shots: data.map((shot: any) => ({ ...shot, date: ensureString(shot.date), time: ensureString(shot.time) })) });
-        } catch (e) { /* handle error */ }
+            
+          if (error) {
+            console.error('Shots query error:', error);
+            throw error;
+          }
+          
+          console.log('Retrieved shots:', data?.length || 0);
+          if (data) set({ shots: data });
+          
+        } catch (e) {
+          console.error('Shots fetch failed:', e);
+        }
       },
       fetchSideEffects: async () => {
+        console.log('Attempting to fetch side effects');
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for side effects fetch');
+          return;
+        }
+        
         try {
+          console.log('Querying side_effects table for user:', user.id);
           const { data, error } = await supabase
             .from('side_effects')
             .select('*')
             .eq('user_id', user.id)
             .order('date', { ascending: false });
-          if (error) throw error;
-          if (data) set({ sideEffects: data.map((effect: any) => ({ ...effect, date: ensureString(effect.date), type: ensureString(effect.type), severity: effect.severity ?? 'mild' })) });
-        } catch (e) { /* handle error */ }
+            
+          if (error) {
+            console.error('Side effects query error:', error);
+            throw error;
+          }
+          
+          console.log('Retrieved side effects:', data?.length || 0);
+          if (data) set({ sideEffects: data });
+          
+        } catch (e) {
+          console.error('Side effects fetch failed:', e);
+        }
       },
       fetchWaterLogs: async () => {
+        if (!supabase) {
+          console.error('Supabase not initialized in fetchWaterLogs');
+          return;
+        }
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for fetchWaterLogs');
+          return;
+        }
         try {
           const { data, error } = await supabase
             .from('water_logs')
@@ -519,8 +644,15 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       fetchStepLogs: async () => {
+        if (!supabase) {
+          console.error('Supabase not initialized in fetchStepLogs');
+          return;
+        }
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for fetchStepLogs');
+          return;
+        }
         try {
           const { data, error } = await supabase
             .from('step_logs')
@@ -532,8 +664,15 @@ export const useHealthStore = create<HealthState>()(
         } catch (e) { /* handle error */ }
       },
       fetchDailyLogs: async () => {
+        if (!supabase) {
+          console.error('Supabase not initialized in fetchDailyLogs');
+          return;
+        }
         const user = useUserStore.getState().user;
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error('No user ID for fetchDailyLogs');
+          return;
+        }
         try {
           const { data, error } = await supabase
             .from('daily_logs')
