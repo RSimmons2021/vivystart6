@@ -89,10 +89,12 @@ export default function ProgressScreen() {
   weeklyScore.overall = Math.round((weeklyScore.fruitsVeggies + weeklyScore.protein + weeklyScore.steps) / 3);
 
   // Weight loss calculation
-  const startWeight = user?.startWeight || 0;
-  const latestWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : startWeight;
-  const weightLoss = startWeight - latestWeight;
-  const percentageLoss = startWeight ? (weightLoss / startWeight) * 100 : 0;
+  // Sort logs by date
+  const sortedWeightLogs = [...weightLogs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const logStartWeight = sortedWeightLogs.length > 0 ? sortedWeightLogs[0].weight : (user?.startWeight || 0);
+  const logLatestWeight = sortedWeightLogs.length > 0 ? sortedWeightLogs[sortedWeightLogs.length - 1].weight : logStartWeight;
+  const weightLoss = logStartWeight - logLatestWeight;
+  const percentageLoss = logStartWeight ? (weightLoss / logStartWeight) * 100 : 0;
   const convertedWeightLoss = {
     total: weightUnit === 'lbs' ? kgToLbs(weightLoss) : Math.round(weightLoss),
     percentage: Math.round(percentageLoss)
