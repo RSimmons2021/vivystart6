@@ -563,10 +563,10 @@ export default function ShotsScreen() {
                   <Card key={shot.id} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
                       <TouchableOpacity 
-                        style={[styles.deleteButton, { paddingHorizontal: 16, paddingVertical: 12 }]}
+                        style={[styles.deleteButton, { marginRight: 36, paddingHorizontal: 20, paddingVertical: 14 }]}
                         onPress={() => handleDeleteShot(shot.id)}
                       >
-                        <Text style={styles.deleteIcon}>×</Text>
+                        <X size={22} color="#FF3B30" />
                       </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
                         <Syringe size={18} color="#9c5dc0" />
@@ -1125,8 +1125,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   deleteButton: {
-    marginRight: 20,
-    padding: 12,
+    marginRight: 36,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: 'transparent',
   },
