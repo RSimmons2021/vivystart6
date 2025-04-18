@@ -175,32 +175,31 @@ export const useHealthStore = create<HealthState>()(
           console.error('No user ID for adding shot');
           return;
         }
-        
+        // Validate user.id is a UUID (simple regex)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(user.id)) {
+          console.error('User ID is not a valid UUID:', user.id);
+          return;
+        }
         try {
           // Format time as HH:MM if it's just a number
           const formattedTime = shot.time.includes(':') ? shot.time : `${shot.time.padStart(2, '0')}:00`;
-          
           const newShot = { 
             ...shot,
             date: ensureString(shot.date),
             time: formattedTime,
             user_id: user.id
           };
-          
           console.log('Prepared shot data:', newShot);
-          
           const { data, error } = await supabase
             .from('shots')
             .insert(newShot)
             .select('*');
-            
           if (error) {
             console.error('Shot insertion error:', error);
             throw error;
           }
-          
           console.log('Inserted shot data:', data);
-          
           if (data?.[0]) {
             const formattedShot = {
               ...data[0],
@@ -575,22 +574,24 @@ export const useHealthStore = create<HealthState>()(
           console.error('No user ID for shots fetch');
           return;
         }
-        
+        // Validate user.id is a UUID (simple regex)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(user.id)) {
+          console.error('User ID is not a valid UUID:', user.id);
+          return;
+        }
         try {
           const { data, error } = await supabase
             .from('shots')
             .select('*')
             .eq('user_id', user.id)
             .order('date', { ascending: false });
-            
           if (error) {
             console.error('Shots query error:', error);
             throw error;
           }
-          
           console.log('Retrieved shots:', data?.length || 0);
           if (data) set({ shots: data });
-          
         } catch (e) {
           console.error('Shots fetch failed:', e);
         }
@@ -602,7 +603,6 @@ export const useHealthStore = create<HealthState>()(
           console.error('No user ID for side effects fetch');
           return;
         }
-        
         try {
           console.log('Querying side_effects table for user:', user.id);
           const { data, error } = await supabase
@@ -610,15 +610,12 @@ export const useHealthStore = create<HealthState>()(
             .select('*')
             .eq('user_id', user.id)
             .order('date', { ascending: false });
-            
           if (error) {
             console.error('Side effects query error:', error);
             throw error;
           }
-          
           console.log('Retrieved side effects:', data?.length || 0);
           if (data) set({ sideEffects: data });
-          
         } catch (e) {
           console.error('Side effects fetch failed:', e);
         }

@@ -22,13 +22,14 @@ import {
   ThermometerSun,
   Check
 } from 'lucide-react-native';
-import { Card } from '@/components/Card';
-import { Button } from '@/components/Button';
-import { useThemeStore } from '@/store/theme-store';
-import { useUserStore } from '@/store/user-store';
-import { useHealthStore } from '@/store/health-store';
-import Colors from '@/constants/colors';
-import { SideEffect } from '@/types';
+import { Card } from '../../components/Card';
+import { Button } from '../../components/Button';
+import { TimePickerWheel } from '../components/TimePickerWheel';
+import { useThemeStore } from '../../store/theme-store';
+import { useUserStore } from '../../store/user-store';
+import { useHealthStore } from '../../store/health-store';
+import Colors from '../../constants/colors';
+import { SideEffect } from '../types';
 import { 
   format, 
   startOfMonth, 
@@ -40,11 +41,39 @@ import {
   parseISO,
   isToday
 } from 'date-fns';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 
 // Conversion functions
 const kgToLbs = (kg: number) => Math.round(kg * 2.20462);
 const lbsToKg = (lbs: number) => lbs / 2.20462;
+
+// Convert 12-hour time string (e.g., "02:30 PM") to 24-hour format (e.g., "14:30")
+function convertTo24Hour(time12h: string): string {
+  const match = time12h.match(/^(\d{1,2}):(\d{2}) ?(AM|PM)$/i);
+  if (!match) return time12h; // fallback, maybe already 24h
+
+  let hour = parseInt(match[1], 10);
+  const minute = match[2];
+  const meridiem = match[3].toUpperCase();
+
+  if (meridiem === 'PM' && hour !== 12) hour += 12;
+  if (meridiem === 'AM' && hour === 12) hour = 0;
+
+  return `${hour.toString().padStart(2, '0')}:${minute}`;
+}
+
+// Helper to format 24h time ("14:30") to 12h time ("2:30 PM")
+function formatTimeTo12Hour(time24: string): string {
+  if (!time24) return '';
+  // Remove trailing :00 if present
+  let [hourStr, minuteStr] = time24.split(":");
+  let hour = parseInt(hourStr, 10);
+  let minute = parseInt(minuteStr, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+}
 
 // List of popular GLP-1 medications with dosages
 const GLP1_MEDICATIONS = [
@@ -262,30 +291,32 @@ export default function ShotsScreen() {
   };
   
   const handleAddShot = async () => {
+    console.log('handleAddShot called', { time, location, notes, selectedMedication });
     if (!time) {
       setActionError('Please enter a time');
       return;
     }
-    
-    // Format time as HH:MM if it's just a number
-    const formattedTime = time.includes(':') ? time : `${time.padStart(2, '0')}:00`;
-    
+
+    // Convert 12h to 24h if needed
+    const formattedTime = convertTo24Hour(time);
+
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const medication = selectedMedication.id === 'other' 
         ? `${customMedication} ${customDosage}`.trim() 
         : `${selectedMedication.name} ${selectedMedication.dosage}`;
-      
-      await addShot({
+      const shotData = {
         date: selectedDate.toISOString(),
         time: formattedTime,
         location,
         notes,
         medication
-      });
-      
+      };
+      console.log('Attempting to add shot:', shotData);
+      await addShot(shotData);
+      console.log('Shot added successfully');
       setTime('');
       setLocation('');
       setNotes('');
@@ -585,7 +616,7 @@ export default function ShotsScreen() {
                             Time:
                           </Text>
                           <Text style={[styles.dataCardDetailValue, { color: themeColors.text }]}>
-                            {shot.time}
+                            {formatTimeTo12Hour(shot.time)}
                           </Text>
                         </View>
                       )}
@@ -813,12 +844,9 @@ export default function ShotsScreen() {
               )}
               
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Time</Text>
-              <TextInput
-                style={[styles.input, { borderColor: themeColors.border, color: themeColors.text }]}
-                placeholder="Enter time (e.g., 8:00 AM)"
-                placeholderTextColor={themeColors.textTertiary}
-                value={time}
-                onChangeText={setTime}
+              <TimePickerWheel
+                value={time || '08:00'}
+                onChange={setTime}
               />
               
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Injection Location</Text>
