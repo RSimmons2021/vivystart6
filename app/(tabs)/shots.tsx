@@ -159,6 +159,15 @@ export default function ShotsScreen() {
   const [showSideEffectDropdown, setShowSideEffectDropdown] = useState(false);
   const [pendingDeleteWeightId, setPendingDeleteWeightId] = useState<string | null>(null);
 
+  // Defensive check: show loading or error if user not found
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>User not found</Text>
+      </SafeAreaView>
+    );
+  }
+
   // Helper functions moved here before use
   const getShotsForDate = (date: Date) => {
     return shots.filter(shot => {
@@ -217,14 +226,6 @@ export default function ShotsScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (!user) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>User not found</Text>
       </View>
     );
   }

@@ -41,6 +41,15 @@ export default function ProgressScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [mealModalVisible, setMealModalVisible] = useState(false);
 
+  // Defensive check: show loading or error if user not found
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>User not found</Text>
+      </SafeAreaView>
+    );
+  }
+
   // Add new weight log
   const handleAddWeight = async (weight: number, date: string) => {
     if (!user?.id) return;
@@ -122,17 +131,6 @@ export default function ProgressScreen() {
         </View>
         <View style={styles.loadingContainer}>
           <Text style={[styles.loadingText, { color: themeColors.text }]}>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!user) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: themeColors.text }]}>Progress</Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>No user found</Text>
         </View>
       </SafeAreaView>
     );
