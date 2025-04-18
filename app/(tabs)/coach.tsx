@@ -45,7 +45,7 @@ interface ChatMessage {
 }
 
 export default function CoachScreen() {
-  const { user, fetchUser } = useUserStore();
+  const { user, fetchUser, updateUser } = useUserStore();
   const { isDarkMode } = useThemeStore();
   const { 
     addWeightLog, 
@@ -84,6 +84,10 @@ export default function CoachScreen() {
   const flatListRef = useRef<FlatList>(null);
   const [loading, setLoading] = useState(false);
   
+  // Goal weight state
+  const [goalWeightInput, setGoalWeightInput] = useState(user?.goalWeight ? String(user.goalWeight) : '');
+  const [goalWeightModalVisible, setGoalWeightModalVisible] = useState(false);
+
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
   
@@ -477,6 +481,63 @@ export default function CoachScreen() {
                 <CircularProgress
                   size={40}
                   strokeWidth={4}
+                  progress={100}
+                  color={themeColors.primary}
+                  backgroundColor={themeColors.border}
+                >
+                  <Scale size={20} color={themeColors.primary} />
+                </CircularProgress>
+                <View style={styles.trackerTitleContent}>
+                  <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Weight</Text>
+                  <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}>
+                    {user?.currentWeight || '0'} lbs
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => handleAddPress('weight')}
+              >
+                <Plus size={20} color={themeColors.card} />
+              </TouchableOpacity>
+            </View>
+          </Card>
+          
+          <Card style={[styles.trackerCard, { backgroundColor: themeColors.card }]}> 
+            <View style={styles.trackerHeader}>
+              <View style={styles.trackerTitleContainer}>
+                <CircularProgress
+                  size={40}
+                  strokeWidth={4}
+                  progress={user?.goalWeight && user?.currentWeight ? Math.max(0, Math.min(100, 100 - ((user.currentWeight - user.goalWeight) / (user.currentWeight || 1)) * 100)) : 0}
+                  color={themeColors.primary}
+                  backgroundColor={themeColors.border}
+                >
+                  <Scale size={20} color={themeColors.primary} />
+                </CircularProgress>
+                <View style={styles.trackerTitleContent}>
+                  <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Goal Weight</Text>
+                  <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}> {user?.goalWeight ? `${user.goalWeight} lbs` : 'Set your goal'} </Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => {
+                  setGoalWeightInput(user?.goalWeight ? String(user.goalWeight) : '');
+                  setGoalWeightModalVisible(true);
+                }}
+              >
+                <Plus size={20} color={themeColors.card} />
+              </TouchableOpacity>
+            </View>
+          </Card>
+
+          <Card style={[styles.trackerCard, { backgroundColor: themeColors.card }]}>
+            <View style={styles.trackerHeader}>
+              <View style={styles.trackerTitleContainer}>
+                <CircularProgress
+                  size={40}
+                  strokeWidth={4}
                   progress={(dailyLog?.fruitsVeggiesServings ?? 0) / 5 * 100}
                   color={themeColors.fruits}
                   backgroundColor={themeColors.border}
@@ -555,34 +616,6 @@ export default function CoachScreen() {
             </View>
           </Card>
           
-          <Card style={[styles.trackerCard, { backgroundColor: themeColors.card }]}>
-            <View style={styles.trackerHeader}>
-              <View style={styles.trackerTitleContainer}>
-                <CircularProgress
-                  size={40}
-                  strokeWidth={4}
-                  progress={100}
-                  color={themeColors.primary}
-                  backgroundColor={themeColors.border}
-                >
-                  <Scale size={20} color={themeColors.primary} />
-                </CircularProgress>
-                <View style={styles.trackerTitleContent}>
-                  <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Weight</Text>
-                  <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}>
-                    {user?.currentWeight || '0'} lbs
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => handleAddPress('weight')}
-              >
-                <Plus size={20} color={themeColors.card} />
-              </TouchableOpacity>
-            </View>
-          </Card>
-
           <Card style={[styles.trackerCard, { backgroundColor: themeColors.card }]}> 
             <View style={styles.trackerHeader}>
               <View style={styles.trackerTitleContainer}>
@@ -717,6 +750,44 @@ export default function CoachScreen() {
             <Button
               title="Confirm"
               onPress={() => setDatePickerVisible(false)}
+              style={styles.saveButton}
+            />
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Goal Weight Modal */}
+      <Modal
+        visible={goalWeightModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setGoalWeightModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>  
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>Set Goal Weight</Text>
+              <TouchableOpacity onPress={() => setGoalWeightModalVisible(false)}>
+                <X size={24} color={themeColors.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Goal Weight (lbs)</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: themeColors.backgroundSecondary, color: themeColors.text }]}
+              value={goalWeightInput}
+              onChangeText={setGoalWeightInput}
+              placeholder="Enter goal weight"
+              placeholderTextColor={themeColors.textTertiary}
+              keyboardType="numeric"
+            />
+            <Button
+              title="Save"
+              onPress={async () => {
+                if (goalWeightInput && !isNaN(Number(goalWeightInput))) {
+                  await updateUser({ goalWeight: Number(goalWeightInput) });
+                  setGoalWeightModalVisible(false);
+                }
+              }}
               style={styles.saveButton}
             />
           </View>
