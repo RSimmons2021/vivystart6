@@ -187,6 +187,8 @@ export default function ShotsScreen() {
   const [sideEffectNotes, setSideEffectNotes] = useState('');
   const [showSideEffectDropdown, setShowSideEffectDropdown] = useState(false);
   const [pendingDeleteWeightId, setPendingDeleteWeightId] = useState<string | null>(null);
+  const [pendingDeleteShotId, setPendingDeleteShotId] = useState<string | null>(null);
+  const [pendingDeleteSideEffectId, setPendingDeleteSideEffectId] = useState<string | null>(null);
 
   // Defensive check: show loading or error if user not found
   if (!user) {
@@ -597,7 +599,7 @@ export default function ShotsScreen() {
                     <View style={styles.dataCardHeader}>
                       <TouchableOpacity 
                         style={[styles.deleteButton, { marginRight: 36, paddingHorizontal: 20, paddingVertical: 14 }]}
-                        onPress={() => handleDeleteShot(shot.id)}
+                        onPress={() => setPendingDeleteShotId(shot.id)}
                       >
                         <X size={22} color="#FF3B30" />
                       </TouchableOpacity>
@@ -730,7 +732,7 @@ export default function ShotsScreen() {
                 selectedDateSideEffects.map((effect, index) => (
                   <Card key={index} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
-                      <TouchableOpacity onPress={() => handleDeleteSideEffect(effect.id)}>
+                      <TouchableOpacity onPress={() => setPendingDeleteSideEffectId(effect.id)}>
                         <X size={18} color={themeColors.textTertiary} />
                       </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
@@ -1040,13 +1042,69 @@ export default function ShotsScreen() {
           <View style={[styles.confirmBox, { backgroundColor: themeColors.card }]}>
             <Text style={[styles.confirmText, { color: themeColors.text }]}>Are you sure you want to delete this entry?</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24 }}>
-              <TouchableOpacity onPress={() => setPendingDeleteWeightId(null)} style={[styles.confirmCancelBtn, { backgroundColor: themeColors.backgroundSecondary }]}>
+              <TouchableOpacity onPress={() => setPendingDeleteWeightId(null)} style={[styles.confirmCancelBtn, { backgroundColor: themeColors.backgroundSecondary }]}> 
                 <Text style={[styles.confirmCancelText, { color: themeColors.text }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={async () => {
                   if (pendingDeleteWeightId) await handleDeleteWeight(pendingDeleteWeightId);
                   setPendingDeleteWeightId(null);
+                }}
+                style={[styles.confirmDeleteBtn, { backgroundColor: '#FF3B30' }]}
+              >
+                <Text style={styles.confirmDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Delete Shot Confirmation Modal */}
+      <Modal
+        visible={!!pendingDeleteShotId}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingDeleteShotId(null)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={[styles.confirmBox, { backgroundColor: themeColors.card }]}>
+            <Text style={[styles.confirmText, { color: themeColors.text }]}>Are you sure you want to delete this shot?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24 }}>
+              <TouchableOpacity onPress={() => setPendingDeleteShotId(null)} style={[styles.confirmCancelBtn, { backgroundColor: themeColors.backgroundSecondary }]}> 
+                <Text style={[styles.confirmCancelText, { color: themeColors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (pendingDeleteShotId) await handleDeleteShot(pendingDeleteShotId);
+                  setPendingDeleteShotId(null);
+                }}
+                style={[styles.confirmDeleteBtn, { backgroundColor: '#FF3B30' }]}
+              >
+                <Text style={styles.confirmDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Delete Side Effect Confirmation Modal */}
+      <Modal
+        visible={!!pendingDeleteSideEffectId}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingDeleteSideEffectId(null)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={[styles.confirmBox, { backgroundColor: themeColors.card }]}>
+            <Text style={[styles.confirmText, { color: themeColors.text }]}>Are you sure you want to delete this side effect?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24 }}>
+              <TouchableOpacity onPress={() => setPendingDeleteSideEffectId(null)} style={[styles.confirmCancelBtn, { backgroundColor: themeColors.backgroundSecondary }]}> 
+                <Text style={[styles.confirmCancelText, { color: themeColors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (pendingDeleteSideEffectId) await handleDeleteSideEffect(pendingDeleteSideEffectId);
+                  setPendingDeleteSideEffectId(null);
                 }}
                 style={[styles.confirmDeleteBtn, { backgroundColor: '#FF3B30' }]}
               >
