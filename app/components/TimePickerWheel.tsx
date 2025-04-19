@@ -11,7 +11,7 @@ const hours12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
 const minutes = Array.from({ length: 60 }, (_, i) => i);
 const meridiems = ['AM', 'PM'];
 
-export const TimePickerWheel: React.FC<TimePickerWheelProps> = ({ value, onChange }) => {
+const TimePickerWheel: React.FC<TimePickerWheelProps> = ({ value, onChange }) => {
   // Parse value ("HH:MM AM/PM")
   let hour = 8, minute = 0, meridiem = 'AM';
   if (value) {
@@ -27,6 +27,13 @@ export const TimePickerWheel: React.FC<TimePickerWheelProps> = ({ value, onChang
       }
     }
   }
+
+  // Fix: Always fire onChange for initial value (8:00 AM) on mount
+  React.useEffect(() => {
+    if (!value) {
+      onChange('08:00 AM');
+    }
+  }, []); // Only run once on mount
 
   const handleChange = (h: number, m: number, mer: string) => {
     // Convert to string and pass up
@@ -88,3 +95,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
 });
+
+export default TimePickerWheel;
