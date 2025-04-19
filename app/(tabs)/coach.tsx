@@ -32,6 +32,7 @@ import { Button } from '@/components/Button';
 import { useHealthStore } from '@/store/health-store';
 import { useUserStore } from '@/store/user-store';
 import { useThemeStore } from '@/store/theme-store';
+import { useGamificationStore } from '@/store/gamification-store';
 import Colors from '@/constants/colors';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
 import { DailyLog } from '@/types';
@@ -79,6 +80,7 @@ async function saveChatMessage(userId: string, text: string, isUser: boolean): P
 export default function CoachScreen() {
   const { user, fetchUser, updateUser } = useUserStore();
   const { isDarkMode } = useThemeStore();
+  const { checkAchievementsAndChallenges, addPoints } = useGamificationStore();
   const { 
     addWeightLog, 
     getDailyLog, 
@@ -194,6 +196,8 @@ export default function CoachScreen() {
     setModalLoading(true);
     setModalError(null);
     const currentDate = format(new Date(), 'yyyy-MM-dd');
+    let loggedType: 'weight' | 'fruits' | 'protein' | 'steps' | null = null;
+    let loggedValue = 0;
     try {
       switch (modalType) {
         case 'weight': {
@@ -203,6 +207,8 @@ export default function CoachScreen() {
               date: weightDate || currentDate,
               weight: weightValue,
             });
+            loggedType = 'weight';
+            loggedValue = weightValue;
           }
           break;
         }
@@ -212,6 +218,8 @@ export default function CoachScreen() {
             const logData = { fruitsVeggies: fruitsValue };
             console.log('Calling updateDailyLog with:', logData);
             await updateDailyLog(currentDate, logData);
+            loggedType = 'fruits';
+            loggedValue = fruitsValue;
           }
           break;
         }
@@ -221,6 +229,8 @@ export default function CoachScreen() {
             const logData = { proteinGrams: proteinValue };
             console.log('Calling updateDailyLog with:', logData);
             await updateDailyLog(currentDate, logData);
+            loggedType = 'protein';
+            loggedValue = proteinValue;
           }
           break;
         }
@@ -230,6 +240,8 @@ export default function CoachScreen() {
             const logData = { steps: stepsValue };
             console.log('Calling updateDailyLog with:', logData);
             await updateDailyLog(currentDate, logData);
+            loggedType = 'steps';
+            loggedValue = stepsValue;
           }
           break;
         }
@@ -239,6 +251,7 @@ export default function CoachScreen() {
             const logData = { waterOz: waterValue };
             console.log('Calling updateDailyLog with:', logData);
             await updateDailyLog(currentDate, logData);
+            // no achievements for water
           }
           break;
         }
@@ -247,6 +260,25 @@ export default function CoachScreen() {
       const updatedLog = await getDailyLog(currentDate);
       setDailyLog(updatedLog);
       await fetchDailyLogs();
+      // Evaluate achievements/challenges
+      if (user?.id && loggedType) {
+        checkAchievementsAndChallenges(loggedType, loggedValue, user.id);
+        // Award base points for logging
+        switch (loggedType) {
+          case 'steps':
+            addPoints(Math.floor(loggedValue / 1000) * 5);
+            break;
+          case 'protein':
+            addPoints(Math.floor(loggedValue / 10) * 2);
+            break;
+          case 'fruits':
+            addPoints(loggedValue);
+            break;
+          case 'weight':
+            addPoints(10);
+            break;
+        }
+      }
       setModalVisible(false);
     } catch (e) {
       setModalError('Failed to save. Please try again.');
@@ -484,7 +516,7 @@ export default function CoachScreen() {
                 </View>
               </View>
               <TouchableOpacity 
-                style={styles.addButton}
+                style={[styles.addButton, { backgroundColor: themeColors.primary }]}
                 onPress={() => handleAddPress('weight')}
               >
                 <Plus size={20} color={themeColors.card} />

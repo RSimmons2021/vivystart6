@@ -35,7 +35,7 @@ interface GamificationState {
   updateLoginStreak: () => void;
   fetchAchievements: (user_id: string) => Promise<void>;
   fetchChallenges: (user_id: string) => Promise<void>;
-  checkAchievementsAndChallenges: (type: 'weight' | 'steps' | 'protein' | 'fruits', value: number, userId: string) => void;
+  checkAchievementsAndChallenges: (type: 'weight' | 'steps' | 'protein' | 'fruits' | 'shots', value: number, userId: string) => void;
 }
 
 // Default achievements
@@ -265,8 +265,17 @@ export const useGamificationStore = create<GamificationState>()(
             .eq('user_id', user_id);
           if (error) throw error;
           set((state) => ({
-            achievements: state.achievements.map(a => a.id === achievement_id ? { ...a, isUnlocked: true, unlockedAt: new Date().toISOString() } : a)
+            achievements: state.achievements.map(a =>
+              a.id === achievement_id
+                ? { ...a, isUnlocked: true, unlockedAt: new Date().toISOString() }
+                : a
+            )
           }));
+          // Award points for achievement
+          const ach = get().achievements.find(a => a.id === achievement_id);
+          if (ach) get().addPoints(ach.points);
+          // Always refresh achievements from Supabase to sync state
+          await get().fetchAchievements(user_id);
         } catch (e) { /* handle error */ }
       },
       
@@ -407,7 +416,11 @@ export const useGamificationStore = create<GamificationState>()(
             .select('*')
             .eq('user_id', user_id);
           if (error) throw error;
-          if (data) set({ achievements: data.map(mapAchievement) });
+          if (data && data.length > 0) {
+            set({ achievements: data.map(mapAchievement) });
+          } else {
+            set({ achievements: defaultAchievements });
+          }
         } catch (e) { /* handle error */ }
       },
       fetchChallenges: async (user_id) => {
@@ -423,8 +436,11 @@ export const useGamificationStore = create<GamificationState>()(
       checkAchievementsAndChallenges: (type, value, userId) => {
         const { achievements, unlockAchievement, challenges, updateChallengeProgress, completeChallenge } = get();
 
+        if (type === 'shots') {
+          const firstShot = achievements.find(a => a.id === 'first-shot');
+          if (firstShot && !firstShot.isUnlocked) unlockAchievement(firstShot.id, userId);
+        }
         // --- Achievements ---
-        // Example: First weight log
         if (type === 'weight') {
           const firstWeight = achievements.find(a => a.id === 'first-weight-log');
           if (firstWeight && !firstWeight.isUnlocked) {

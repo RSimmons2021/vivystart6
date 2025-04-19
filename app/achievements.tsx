@@ -24,7 +24,7 @@ export default function AchievementsScreen() {
   const { isDarkMode } = useThemeStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
   const { user } = useUserStore();
-  const { achievements, fetchAchievements } = useGamificationStore();
+  const { achievements, fetchAchievements, points, level } = useGamificationStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +38,7 @@ export default function AchievementsScreen() {
     setLoading(false);
   }, [user?.id]);
 
-  // Points, level, streaks can be calculated from achievements if needed
-  const points = achievements.reduce((sum, a) => sum + (a.points || 0), 0);
-  const level = Math.floor(points / 100) + 1;
+  // Streaks can be calculated or fetched if needed
   const streaks = { login: 0, weight: 0, meals: 0 }; // TODO: calculate from achievements if needed
 
   const unlockedAchievements = achievements.filter(a => a.isUnlocked);
@@ -125,42 +123,28 @@ export default function AchievementsScreen() {
         <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
           Unlocked ({filteredUnlocked.length})
         </Text>
-        
-        {filteredUnlocked.length === 0 ? (
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No achievements unlocked in this category yet
-          </Text>
-        ) : (
-          <View style={styles.badgesGrid}>
-            {filteredUnlocked.map(achievement => (
-              <AchievementBadge
-                key={achievement.id}
-                achievement={achievement}
-                size="medium"
-              />
-            ))}
-          </View>
-        )}
+        <View style={styles.badgesGrid}>
+          {filteredUnlocked.map(achievement => (
+            <AchievementBadge
+              key={achievement.id}
+              achievement={achievement}
+              size="medium"
+            />
+          ))}
+        </View>
         
         <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
           Locked ({filteredLocked.length})
         </Text>
-        
-        {filteredLocked.length === 0 ? (
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            You've unlocked all achievements in this category!
-          </Text>
-        ) : (
-          <View style={styles.badgesGrid}>
-            {filteredLocked.map(achievement => (
-              <AchievementBadge
-                key={achievement.id}
-                achievement={achievement}
-                size="medium"
-              />
-            ))}
-          </View>
-        )}
+        <View style={styles.badgesGrid}>
+          {filteredLocked.map(achievement => (
+            <AchievementBadge
+              key={achievement.id}
+              achievement={achievement}
+              size="medium"
+            />
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

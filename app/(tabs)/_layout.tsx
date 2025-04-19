@@ -6,7 +6,7 @@ import {
   LineChart, 
   Target, 
   MessageSquare, 
-  Syringe 
+  Syringe
 } from 'lucide-react-native';
 import { useThemeStore } from '@/store/theme-store';
 import Colors from '@/constants/colors';
