@@ -24,7 +24,7 @@ import {
 } from 'lucide-react-native';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
-import TimePickerWheel from '../components/TimePickerWheel';
+import TimePickerWheel from '../components/TimePickerWheel'; // This is correct (default export)
 import { useThemeStore } from '../../store/theme-store';
 import { useUserStore } from '../../store/user-store';
 import { useHealthStore } from '../../store/health-store';
@@ -314,7 +314,7 @@ export default function ShotsScreen() {
         notes,
         medication
       };
-      console.log('Attempting to add shot:', shotData);
+      console.log('Attempting to add shot (with formatted time):', shotData); // Debug log
       await addShot(shotData);
       console.log('Shot added successfully');
       setTime('');
@@ -846,7 +846,10 @@ export default function ShotsScreen() {
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Time</Text>
               <TimePickerWheel
                 value={time || '08:00'}
-                onChange={setTime}
+                onChange={(val) => {
+                  console.log('TimePickerWheel selected:', val); // Debug log
+                  setTime(val);
+                }}
               />
               
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Injection Location</Text>
