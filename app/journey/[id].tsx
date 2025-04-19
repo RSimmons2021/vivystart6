@@ -18,6 +18,7 @@ import { AchievementUnlockedModal } from '@/components/AchievementUnlockedModal'
 import { useJourneyStore } from '@/store/journey-store';
 import { useGamificationStore } from '@/store/gamification-store';
 import { useThemeStore } from '@/store/theme-store';
+import { useUserStore } from '@/store/user-store';
 import Colors from '@/constants/colors';
 import { Achievement } from '@/types';
 
@@ -26,6 +27,7 @@ export default function JourneyStageScreen() {
   const { journeyStages, completeJourneyStage } = useJourneyStore();
   const { unlockAchievement, achievements } = useGamificationStore();
   const { isDarkMode } = useThemeStore();
+  const { user } = useUserStore((state) => state.user);
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
   
   const stage = journeyStages.find(s => s.id === id);
@@ -49,9 +51,9 @@ export default function JourneyStageScreen() {
   };
   
   const checkAndUnlockAchievement = (achievementId: string) =>  {
-    const achievement = achievements.find(a => a.id === achievementId);
-    if (achievement && !achievement.isUnlocked) {
-      unlockAchievement(achievementId);
+    const achievement = achievements.find(a => a.achievement_code === achievementId);
+    if (achievement && !achievement.is_unlocked && user?.id) {
+      unlockAchievement(achievementId, user.id);
       setUnlockedAchievement(achievement);
       setAchievementModalVisible(true);
       
@@ -105,7 +107,7 @@ export default function JourneyStageScreen() {
               </View>
             </Card>
             <Text style={[styles.paragraph, { color: themeColors.text }]}>
-              GLP-1 medications are typically administered as weekly injections. It's important to follow your healthcare provider's instructions carefully.
+              GLP-1 medications are typically administered as weekly injections. It's essential to follow your healthcare provider's instructions carefully.
             </Text>
           </>
         );
@@ -223,7 +225,7 @@ export default function JourneyStageScreen() {
         return (
           <>
             <Text style={[styles.paragraph, { color: themeColors.text }]}>
-              As you progress in your GLP-1 journey, it's important to focus on long-term success and weight maintenance.
+              As you progress in your GLP-1 journey, it's essential to focus on long-term success and weight maintenance.
             </Text>
             <Card style={[styles.infoCard, { backgroundColor: themeColors.card }]}>
               <Text style={[styles.infoCardTitle, { color: themeColors.text }]}>Building Sustainable Habits</Text>

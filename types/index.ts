@@ -101,12 +101,12 @@ export interface WeeklyScore {
 
 // Gamification types
 export interface Achievement {
-  id: string;
+  achievement_code: string;
   title: string;
   description: string;
   icon: string;
-  isUnlocked: boolean;
-  unlockedAt?: string;
+  is_unlocked: boolean;
+  unlocked_at?: string;
   category: 'weight' | 'nutrition' | 'activity' | 'medication' | 'streak' | 'journey';
   points: number;
 }

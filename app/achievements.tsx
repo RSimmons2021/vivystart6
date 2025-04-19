@@ -38,8 +38,8 @@ export default function AchievementsScreen() {
     setLoading(false);
   }, [user?.id]);
 
-  const unlockedAchievements = achievements.filter(a => a.isUnlocked);
-  const lockedAchievements = achievements.filter(a => !a.isUnlocked);
+  const unlockedAchievements = achievements.filter(a => a.is_unlocked);
+  const lockedAchievements = achievements.filter(a => !a.is_unlocked);
 
   const categories = [
     { id: null, label: 'All' },
@@ -123,7 +123,7 @@ export default function AchievementsScreen() {
         <View style={styles.badgesGrid}>
           {filteredUnlocked.map(achievement => (
             <AchievementBadge
-              key={achievement.id}
+              key={achievement.achievement_code}
               achievement={achievement}
               size="medium"
             />
@@ -136,7 +136,7 @@ export default function AchievementsScreen() {
         <View style={styles.badgesGrid}>
           {filteredLocked.map(achievement => (
             <AchievementBadge
-              key={achievement.id}
+              key={achievement.achievement_code}
               achievement={achievement}
               size="medium"
             />

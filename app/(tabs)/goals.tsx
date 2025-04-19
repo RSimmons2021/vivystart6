@@ -142,9 +142,9 @@ export default function GoalsScreen() {
   };
   
   const checkAndUnlockAchievement = (achievementId: string) => {
-    const achievement = achievements.find(a => a.id === achievementId);
-    if (achievement && !achievement.isUnlocked) {
-      unlockAchievement(achievementId);
+    const achievement = achievements.find(a => a.achievement_code === achievementId);
+    if (achievement && !achievement.is_unlocked && user?.id) {
+      unlockAchievement(achievementId, user.id);
       setUnlockedAchievement(achievement);
       setAchievementModalVisible(true);
       

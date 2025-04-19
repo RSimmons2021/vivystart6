@@ -108,27 +108,22 @@ export const useHealthStore = create<HealthState>()(
             .from('weight_logs')
             .insert([newLog]);
           if (error) throw error;
-          const dataArr = data as unknown[];
-          const maybeObj = dataArr[0];
-          if (
-            data &&
-            Array.isArray(data) &&
-            dataArr.length > 0 &&
-            typeof maybeObj === 'object' &&
-            maybeObj !== null &&
-            !Array.isArray(maybeObj)
-          ) {
-            set((state) => ({ weightLogs: [...state.weightLogs, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
-            // Optionally update daily log
-            const dailyLog = await get().getDailyLog(newLog.date);
-            if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
-              await get().updateDailyLog(newLog.date, { weight: newLog.weight });
-            }
-            // --- Call achievement/challenge check ---
-            import('./gamification-store').then(({ useGamificationStore }) => {
-              useGamificationStore.getState().checkAchievementsAndChallenges('weight', newLog.weight, user.id);
-            });
+          const dataArr = Array.isArray(data) ? data : [];
+          if (dataArr.length > 0 && typeof dataArr[0] === 'object' && dataArr[0] !== null && !Array.isArray(dataArr[0])) {
+            set((state) => ({ weightLogs: [...state.weightLogs, { ...(dataArr[0] as Record<string, any>), date: ensureString((dataArr[0] as Record<string, any>).date) }] }));
+          } else {
+            console.warn('Supabase did not return inserted weight log data. Falling back to local state update.');
+            set((state) => ({ weightLogs: [...state.weightLogs, { ...newLog }] }));
           }
+          // Optionally update daily log
+          const dailyLog = await get().getDailyLog(newLog.date);
+          if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
+            await get().updateDailyLog(newLog.date, { weight: newLog.weight });
+          }
+          // --- Call achievement/challenge check ---
+          import('./gamification-store').then(({ useGamificationStore }) => {
+            useGamificationStore.getState().checkAchievementsAndChallenges('weight', newLog.weight, user.id);
+          });
         } catch (e) { console.error('addWeightLog error:', e); }
       },
       updateWeightLog: async (id: string, data: Partial<WeightLog>) => {

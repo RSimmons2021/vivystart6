@@ -28,6 +28,7 @@ import TimePickerWheel from '../components/TimePickerWheel'; // This is correct 
 import { useThemeStore } from '../../store/theme-store';
 import { useUserStore } from '../../store/user-store';
 import { useHealthStore } from '../../store/health-store';
+import { useGamificationStore } from '../../store/gamification-store';
 import Colors from '../../constants/colors';
 import { SideEffect } from '../types';
 import { 
@@ -164,6 +165,7 @@ export default function ShotsScreen() {
     fetchWeightLogs,
     fetchSideEffects
   } = useHealthStore();
+  const { checkAchievementsAndChallenges } = useGamificationStore();
   const [loading, setLoading] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -319,6 +321,9 @@ export default function ShotsScreen() {
       console.log('Attempting to add shot (with formatted time):', shotData); // Debug log
       await addShot(shotData);
       console.log('Shot added successfully');
+      if (user?.id) {
+        checkAchievementsAndChallenges('shots', 1, user.id);
+      }
       setTime('');
       setLocation('');
       setNotes('');
@@ -376,6 +381,9 @@ export default function ShotsScreen() {
         notes: ''
       });
       await fetchWeightLogs(); // Refresh weight logs after add
+      if (user?.id) {
+        checkAchievementsAndChallenges('weight', weightInKg, user.id);
+      }
       setWeightModalVisible(false);
     } catch (e) {
       setActionError('Failed to add weight log.');

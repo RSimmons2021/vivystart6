@@ -77,14 +77,29 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
           { 
             width: width * 0.8, 
             height: height * 0.8,
-            backgroundColor: getBadgeColor()
+            backgroundColor: getBadgeColor(),
+            position: 'relative',
+            justifyContent: 'center',
+            alignItems: 'center'
           }
         ]}
       >
         {achievement.isUnlocked ? (
           <Award size={iconSize} color={themeColors.card} />
         ) : (
-          <Lock size={iconSize} color={themeColors.textTertiary} />
+          <>
+            {/* Show faded real icon for locked achievement */}
+            {React.createElement(
+              require('lucide-react-native')[achievement.icon.charAt(0).toUpperCase() + achievement.icon.slice(1)] || Lock,
+              {
+                size: iconSize,
+                color: themeColors.textTertiary,
+                style: { opacity: 0.4, position: 'absolute' }
+              }
+            )}
+            {/* Overlay lock icon */}
+            <Lock size={iconSize * 0.7} color={themeColors.textTertiary} style={{ position: 'absolute' }} />
+          </>
         )}
       </View>
       <Text 
@@ -98,6 +113,19 @@ export const AchievementBadge: React.FC<AchievementBadgeProps> = ({
         numberOfLines={1}
       >
         {achievement.title}
+      </Text>
+      <Text 
+        style={{
+          color: achievement.isUnlocked ? themeColors.textSecondary : themeColors.textTertiary,
+          fontSize: size === 'small' ? 8 : size === 'large' ? 12 : 10,
+          textAlign: 'center',
+          opacity: achievement.isUnlocked ? 1 : 0.7,
+          marginTop: 2,
+          minHeight: 24
+        }}
+        numberOfLines={2}
+      >
+        {achievement.description}
       </Text>
     </TouchableOpacity>
   );
