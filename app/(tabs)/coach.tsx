@@ -35,6 +35,7 @@ import { useThemeStore } from '@/store/theme-store';
 import Colors from '@/constants/colors';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
 import { DailyLog } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 // Define message type for chat
 interface ChatMessage {
@@ -42,6 +43,37 @@ interface ChatMessage {
   text: string;
   isUser: boolean;
   timestamp: Date;
+}
+
+// Helper to map DB chat message to frontend ChatMessage
+function mapChatMessage(row: any): ChatMessage {
+  return {
+    id: row.id,
+    text: row.text,
+    isUser: row.is_user,
+    timestamp: row.timestamp ? new Date(row.timestamp) : new Date(),
+  };
+}
+
+// Fetch chat history for user
+async function fetchChatHistory(userId: string): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('user_id', userId)
+    .order('timestamp', { ascending: true });
+  if (error) return [];
+  return data.map(mapChatMessage);
+}
+
+// Save message to Supabase
+async function saveChatMessage(userId: string, text: string, isUser: boolean): Promise<ChatMessage | null> {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert([{ user_id: userId, text, is_user: isUser }])
+    .select();
+  if (error || !data || !data[0]) return null;
+  return mapChatMessage(data[0]);
 }
 
 export default function CoachScreen() {
@@ -72,14 +104,7 @@ export default function CoachScreen() {
   
   // Chat state
   const [chatModalVisible, setChatModalVisible] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      text: "Hello! I'm your GLP-1 AI assistant. How can I help you with your health journey today?",
-      isUser: false,
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const [loading, setLoading] = useState(false);
@@ -120,6 +145,13 @@ export default function CoachScreen() {
 
   useEffect(() => {
     if (user?.id) fetchUser(user.id);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchChatHistory(user.id).then(history => {
+      if (history.length > 0) setMessages(history);
+    });
   }, [user?.id]);
 
   // Calendar related functions
@@ -177,43 +209,51 @@ export default function CoachScreen() {
         case 'fruits': {
           const fruitsValue = parseInt(fruitsInput);
           if (!isNaN(fruitsValue) && fruitsValue >= 0) {
-            await updateDailyLog(currentDate, {
-              fruitsVeggiesServings: fruitsValue,
-            });
+            const logData = { fruitsVeggies: fruitsValue };
+            console.log('Calling updateDailyLog with:', logData);
+            await updateDailyLog(currentDate, logData);
           }
           break;
         }
         case 'protein': {
           const proteinValue = parseInt(proteinInput);
           if (!isNaN(proteinValue) && proteinValue >= 0) {
-            await updateDailyLog(currentDate, {
-              proteinGrams: proteinValue,
-            });
+            const logData = { proteinGrams: proteinValue };
+            console.log('Calling updateDailyLog with:', logData);
+            await updateDailyLog(currentDate, logData);
           }
           break;
         }
         case 'steps': {
           const stepsValue = parseInt(stepsInput);
           if (!isNaN(stepsValue) && stepsValue >= 0) {
-            await updateDailyLog(currentDate, {
-              steps: stepsValue,
-            });
+            const logData = { steps: stepsValue };
+            console.log('Calling updateDailyLog with:', logData);
+            await updateDailyLog(currentDate, logData);
           }
           break;
         }
         case 'water': {
           const waterValue = parseInt(waterInput);
           if (!isNaN(waterValue) && waterValue >= 0) {
-            await updateDailyLog(currentDate, {
-              waterOz: waterValue,
-            });
+            const logData = { waterOz: waterValue };
+            console.log('Calling updateDailyLog with:', logData);
+            await updateDailyLog(currentDate, logData);
           }
           break;
         }
       }
+      // Refresh the dailyLog state after update
+      const updatedLog = await getDailyLog(currentDate);
+      setDailyLog(updatedLog);
       setModalVisible(false);
     } catch (e) {
       setModalError('Failed to save. Please try again.');
+      if (e instanceof Error) {
+        console.error('CoachScreen log error:', e.message, e.stack);
+      } else {
+        console.error('CoachScreen log error:', JSON.stringify(e));
+      }
     } finally {
       setModalLoading(false);
     }
@@ -338,80 +378,28 @@ export default function CoachScreen() {
     setChatModalVisible(true);
   };
 
-  // Fetch chat history when chat modal opens
-  useEffect(() => {
-    if (chatModalVisible && user?.id) {
-      setLoading(true);
-      fetch(`http://localhost:5000/gemini-chat/history?user_id=${user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.history) {
-            setMessages(
-              data.history.map((msg: any) => ({
-                id: msg.id?.toString() || Math.random().toString(),
-                text: msg.message,
-                isUser: msg.is_user,
-                timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
-              }))
-            );
-          }
-        })
-        .catch(() => {
-          setMessages([
-            {
-              id: 'error',
-              text: 'Could not load chat history.',
-              isUser: false,
-              timestamp: new Date()
-            }
-          ]);
-        })
-        .finally(() => setLoading(false));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatModalVisible, user?.id]);
-
   // Handle sending a message
   const handleSendMessage = async () => {
-    if (inputMessage.trim() === '' || !user?.id) return;
-    
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      text: inputMessage,
-      isUser: true,
-      timestamp: new Date()
-    };
-    
-    setMessages(prevMessages => [...prevMessages, userMessage]);
-    setInputMessage('');
+    if (!inputMessage.trim() || !user?.id) return;
     setLoading(true);
-    
+    // Save user message
+    const userMsg = await saveChatMessage(user.id, inputMessage, true);
+    if (userMsg) setMessages(prev => [...prev, userMsg]);
+    setInputMessage('');
     try {
-      const res = await fetch('http://localhost:5000/gemini-chat', {
+      // Call Gemini chat endpoint (existing logic)
+      const response = await fetch('http://localhost:5000/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage.text, user_id: user.id })
+        body: JSON.stringify({ user_id: user.id, message: inputMessage })
       });
-      const data = await res.json();
-      const aiMessage: ChatMessage = {
-        id: Date.now().toString() + '-ai',
-        text: data.content || 'Sorry, I could not process your request.',
-        isUser: false,
-        timestamp: new Date()
-      };
-      setMessages(prevMessages => [...prevMessages, aiMessage]);
-    } catch (err) {
-      const aiMessage: ChatMessage = {
-        id: Date.now().toString() + '-ai',
-        text: 'Sorry, there was an error connecting to the AI assistant.',
-        isUser: false,
-        timestamp: new Date()
-      };
-      setMessages(prevMessages => [...prevMessages, aiMessage]);
-    } finally {
-      setLoading(false);
+      const data = await response.json();
+      const aiMsg = await saveChatMessage(user.id, data.reply, false);
+      if (aiMsg) setMessages(prev => [...prev, aiMsg]);
+    } catch (e) {
+      // Optionally show error message
     }
+    setLoading(false);
   };
 
   // Render chat message item

@@ -94,6 +94,7 @@ export const useHealthStore = create<HealthState>()(
       
       // Weight methods
       addWeightLog: async (log: Omit<WeightLog, 'id'>) => {
+        console.log('addWeightLog called with:', log);
         if (!supabase) {
           console.error('Supabase not initialized in addWeightLog');
           return;
@@ -102,6 +103,7 @@ export const useHealthStore = create<HealthState>()(
         if (!user?.id) return;
         try {
           const newLog = { ...log, date: ensureString(log.date), user_id: user.id };
+          console.log('Inserting weight log to Supabase:', newLog);
           const { data, error } = await supabase
             .from('weight_logs')
             .insert([newLog]);
@@ -122,8 +124,12 @@ export const useHealthStore = create<HealthState>()(
             if (dailyLog && typeof dailyLog === 'object' && dailyLog !== null) {
               await get().updateDailyLog(newLog.date, { weight: newLog.weight });
             }
+            // --- Call achievement/challenge check ---
+            import('./gamification-store').then(({ useGamificationStore }) => {
+              useGamificationStore.getState().checkAchievementsAndChallenges('weight', newLog.weight, user.id);
+            });
           }
-        } catch (e) { /* handle error */ }
+        } catch (e) { console.error('addWeightLog error:', e); }
       },
       updateWeightLog: async (id: string, data: Partial<WeightLog>) => {
         if (!supabase) {
@@ -325,6 +331,7 @@ export const useHealthStore = create<HealthState>()(
       
       // Meal methods
       addMeal: async (meal: Omit<Meal, 'id'>) => {
+        console.log('addMeal called with:', meal);
         if (!supabase) {
           console.error('Supabase not initialized in addMeal');
           return;
@@ -333,6 +340,7 @@ export const useHealthStore = create<HealthState>()(
         if (!user?.id) return;
         try {
           const newMeal = { ...meal, date: ensureString(meal.date), user_id: user.id };
+          console.log('Inserting meal to Supabase:', newMeal);
           const { data, error } = await supabase
             .from('meals')
             .insert([newMeal]);
@@ -348,8 +356,20 @@ export const useHealthStore = create<HealthState>()(
             !Array.isArray(maybeObj)
           ) {
             set((state) => ({ meals: [...state.meals, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+            // --- Call achievement/challenge check for protein ---
+            if (typeof newMeal.protein === 'number') {
+              import('./gamification-store').then(({ useGamificationStore }) => {
+                useGamificationStore.getState().checkAchievementsAndChallenges('protein', newMeal.protein, user.id);
+              });
+            }
+            // --- Call achievement/challenge check for fruits/vegetables ---
+            if (typeof newMeal.fruits === 'number') {
+              import('./gamification-store').then(({ useGamificationStore }) => {
+                useGamificationStore.getState().checkAchievementsAndChallenges('fruits', newMeal.fruits, user.id);
+              });
+            }
           }
-        } catch (e) { /* handle error */ }
+        } catch (e) { console.error('addMeal error:', e); }
       },
       updateMeal: async (id: string, data: Partial<Meal>) => {
         if (!supabase) {
@@ -478,6 +498,7 @@ export const useHealthStore = create<HealthState>()(
       
       // Step methods
       addStepLog: async (log: Omit<StepLog, 'id'>) => {
+        console.log('addStepLog called with:', log);
         if (!supabase) {
           console.error('Supabase not initialized in addStepLog');
           return;
@@ -486,6 +507,7 @@ export const useHealthStore = create<HealthState>()(
         if (!user?.id) return;
         try {
           const newLog = { ...log, date: ensureString(log.date), user_id: user.id };
+          console.log('Inserting step log to Supabase:', newLog);
           const { data, error } = await supabase
             .from('step_logs')
             .insert([newLog]);
@@ -501,8 +523,12 @@ export const useHealthStore = create<HealthState>()(
             !Array.isArray(maybeObj)
           ) {
             set((state) => ({ stepLogs: [...state.stepLogs, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+            // --- Call achievement/challenge check ---
+            import('./gamification-store').then(({ useGamificationStore }) => {
+              useGamificationStore.getState().checkAchievementsAndChallenges('steps', newLog.steps, user.id);
+            });
           }
-        } catch (e) { /* handle error */ }
+        } catch (e) { console.error('addStepLog error:', e); }
       },
       updateStepLog: async (id: string, data: Partial<StepLog>) => {
         // Not implemented in backend, but could be added if needed
@@ -529,6 +555,7 @@ export const useHealthStore = create<HealthState>()(
         return undefined;
       },
       updateDailyLog: async (date: string, data: Partial<Omit<DailyLog, 'id' | 'date'>>) => {
+        console.log('updateDailyLog called for date', date, 'with data:', data);
         if (!supabase) {
           console.error('Supabase not initialized in updateDailyLog');
           return;
@@ -541,9 +568,26 @@ export const useHealthStore = create<HealthState>()(
             .from('daily_logs')
             .upsert([{ ...data, date, user_id: user.id }], { onConflict: 'date,user_id' });
           if (error) throw error;
-          // Optionally refetch daily log
-          // (You can add logic here to update Zustand state if needed)
-        } catch (e) { /* handle error */ }
+          // --- Call achievement/challenge check for each nutrient/log type present ---
+          for (const key of Object.keys(data)) {
+            const value = (data as any)[key];
+            if (typeof value === 'number') {
+              let type: 'weight'|'steps'|'protein'|'fruits'|'carbs'|'fat'|'water'|null = null;
+              if (key === 'weight') type = 'weight';
+              if (key === 'steps') type = 'steps';
+              if (key === 'protein') type = 'protein';
+              if (key === 'fruits' || key === 'fruitsVeggies' || key === 'fruits_veggies') type = 'fruits';
+              if (key === 'carbs') type = 'carbs';
+              if (key === 'fat') type = 'fat';
+              if (key === 'water') type = 'water';
+              if (type) {
+                import('./gamification-store').then(({ useGamificationStore }) => {
+                  useGamificationStore.getState().checkAchievementsAndChallenges(type!, value, user.id);
+                });
+              }
+            }
+          }
+        } catch (e) { console.error('updateDailyLog error:', e); }
       },
       
       // Fetch methods

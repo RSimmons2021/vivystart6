@@ -35,6 +35,7 @@ interface GamificationState {
   updateLoginStreak: () => void;
   fetchAchievements: (user_id: string) => Promise<void>;
   fetchChallenges: (user_id: string) => Promise<void>;
+  checkAchievementsAndChallenges: (type: 'weight' | 'steps' | 'protein' | 'fruits', value: number, userId: string) => void;
 }
 
 // Default achievements
@@ -191,6 +192,35 @@ const generateWeeklyChallenges = (): Challenge[] => {
     }
   ];
 };
+
+// Helper: map DB achievement to frontend Achievement
+function mapAchievement(row: any): Achievement {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    isUnlocked: row.is_unlocked ?? row.isUnlocked,
+    unlockedAt: row.unlocked_at ?? row.unlockedAt,
+    category: row.category,
+    points: row.points,
+  };
+}
+
+// Helper: map DB challenge to frontend Challenge
+function mapChallenge(row: any): Challenge {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    startDate: row.start_date ?? row.startDate,
+    endDate: row.end_date ?? row.endDate,
+    isCompleted: row.is_completed ?? row.isCompleted,
+    progress: row.progress,
+    category: row.category,
+    reward: row.reward,
+  };
+}
 
 export const useGamificationStore = create<GamificationState>()(
   persist(
@@ -377,7 +407,7 @@ export const useGamificationStore = create<GamificationState>()(
             .select('*')
             .eq('user_id', user_id);
           if (error) throw error;
-          if (data) set({ achievements: data });
+          if (data) set({ achievements: data.map(mapAchievement) });
         } catch (e) { /* handle error */ }
       },
       fetchChallenges: async (user_id) => {
@@ -387,8 +417,52 @@ export const useGamificationStore = create<GamificationState>()(
             .select('*')
             .eq('user_id', user_id);
           if (error) throw error;
-          if (data) set({ challenges: data });
+          if (data) set({ challenges: data.map(mapChallenge) });
         } catch (e) { /* handle error */ }
+      },
+      checkAchievementsAndChallenges: (type, value, userId) => {
+        const { achievements, unlockAchievement, challenges, updateChallengeProgress, completeChallenge } = get();
+
+        // --- Achievements ---
+        // Example: First weight log
+        if (type === 'weight') {
+          const firstWeight = achievements.find(a => a.id === 'first-weight-log');
+          if (firstWeight && !firstWeight.isUnlocked) {
+            unlockAchievement(firstWeight.id, userId);
+          }
+          // Example: Weight streak or loss could be checked here
+        }
+        if (type === 'protein') {
+          const proteinPro = achievements.find(a => a.id === 'protein-goal-5');
+          if (proteinPro && !proteinPro.isUnlocked && value >= /* your protein goal */ 50) {
+            unlockAchievement(proteinPro.id, userId);
+          }
+        }
+        if (type === 'steps') {
+          const stepMaster = achievements.find(a => a.id === 'steps-10k');
+          if (stepMaster && !stepMaster.isUnlocked && value >= 10000) {
+            unlockAchievement(stepMaster.id, userId);
+          }
+        }
+        if (type === 'fruits') {
+          // Example: Unlock after logging fruits/veggies X times
+        }
+
+        // --- Challenges ---
+        challenges.forEach(challenge => {
+          if (challenge.category === type) {
+            // Example: increment progress based on value
+            let progress = challenge.progress;
+            if (type === 'steps' && value >= 8000) progress += 25; // e.g., 4 days of 8k steps = 100%
+            if (type === 'protein' && value >= 50) progress += 20; // e.g., 5 days of protein goal = 100%
+            if (type === 'fruits' && value >= 4) progress += 20; // e.g., 5 days of 4 servings = 100%
+            if (progress >= 100 && !challenge.isCompleted) {
+              completeChallenge(challenge.id);
+            } else {
+              updateChallengeProgress(challenge.id, Math.min(progress, 100));
+            }
+          }
+        });
       }
     }),
     {

@@ -82,7 +82,7 @@ export interface JourneyStage {
 export interface DailyLog {
   id: string;
   date: string;
-  fruitsVeggiesServings: number;
+  fruitsVeggies: number;
   proteinGrams: number;
   waterOz: number;
   steps: number;
