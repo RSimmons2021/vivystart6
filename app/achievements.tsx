@@ -24,7 +24,7 @@ export default function AchievementsScreen() {
   const { isDarkMode } = useThemeStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
   const { user } = useUserStore();
-  const { achievements, fetchAchievements, points, level } = useGamificationStore();
+  const { achievements, fetchAchievements, points, level, streaks } = useGamificationStore();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +37,6 @@ export default function AchievementsScreen() {
     fetchAchievements(user.id);
     setLoading(false);
   }, [user?.id]);
-
-  // Streaks can be calculated or fetched if needed
-  const streaks = { login: 0, weight: 0, meals: 0 }; // TODO: calculate from achievements if needed
 
   const unlockedAchievements = achievements.filter(a => a.isUnlocked);
   const lockedAchievements = achievements.filter(a => !a.isUnlocked);
