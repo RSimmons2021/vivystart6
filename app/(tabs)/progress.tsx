@@ -35,7 +35,7 @@ export default function ProgressScreen() {
   const { isDarkMode } = useThemeStore();
   const { weightUnit } = useUserStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  const { meals, addMeal, weightLogs, addWeightLog, fetchWeightLogs, fetchDailyLogs, fetchStepLogs } = useHealthStore();
+  const { meals, addMeal, weightLogs, addWeightLog, dailyLogs, getWeeklyScore, fetchWeightLogs, fetchDailyLogs, fetchStepLogs } = useHealthStore();
   const [loading, setLoading] = useState(false);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [modalVisible, setModalVisible] = useState(false);
@@ -88,14 +88,7 @@ export default function ProgressScreen() {
   const today = new Date();
   const weekStart = format(startOfWeek(today), 'yyyy-MM-dd');
   const weekEnd = format(endOfWeek(today), 'yyyy-MM-dd');
-  const weeklyProgress = meals.filter(m => m.date >= weekStart && m.date <= weekEnd);
-  const weeklyScore = {
-    fruitsVeggies: Math.round((weeklyProgress.reduce((sum, m) => sum + (m.fruitsVeggies || 0), 0) / (5 * weeklyProgress.length || 1)) * 100),
-    protein: Math.round((weeklyProgress.reduce((sum, m) => sum + (m.protein || 0), 0) / (100 * weeklyProgress.length || 1)) * 100),
-    steps: Math.round((weeklyProgress.reduce((sum, m) => sum + (m.steps || 0), 0) / (10000 * weeklyProgress.length || 1)) * 100),
-    overall: 0
-  };
-  weeklyScore.overall = Math.round((weeklyScore.fruitsVeggies + weeklyScore.protein + weeklyScore.steps) / 3);
+  const weeklyScore = getWeeklyScore(weekStart, weekEnd);
 
   // Weight loss calculation
   // Sort logs by date

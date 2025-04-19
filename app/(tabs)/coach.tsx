@@ -246,6 +246,7 @@ export default function CoachScreen() {
       // Refresh the dailyLog state after update
       const updatedLog = await getDailyLog(currentDate);
       setDailyLog(updatedLog);
+      await fetchDailyLogs();
       setModalVisible(false);
     } catch (e) {
       setModalError('Failed to save. Please try again.');

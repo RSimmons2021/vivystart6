@@ -736,7 +736,7 @@ export const useHealthStore = create<HealthState>()(
         }
         
         // Calculate averages
-        const fruitsVeggiesTotal = relevantLogs.reduce((sum, log) => sum + log.fruitsVeggiesServings, 0);
+        const fruitsVeggiesTotal = relevantLogs.reduce((sum, log) => sum + log.fruitsVeggies, 0);
         const proteinTotal = relevantLogs.reduce((sum, log) => sum + log.proteinGrams, 0);
         const stepsTotal = relevantLogs.reduce((sum, log) => sum + log.steps, 0);
         
