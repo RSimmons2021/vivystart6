@@ -526,7 +526,7 @@ export default function CoachScreen() {
                 <CircularProgress
                   size={40}
                   strokeWidth={4}
-                  progress={(dailyLog?.fruitsVeggiesServings ?? 0) / 5 * 100}
+                  progress={(dailyLog?.fruitsVeggies ?? 0) / 5 * 100}
                   color={themeColors.fruits}
                   backgroundColor={themeColors.border}
                 >
@@ -535,7 +535,7 @@ export default function CoachScreen() {
                 <View style={styles.trackerTitleContent}>
                   <Text style={[styles.trackerTitle, { color: themeColors.text }]}>Fruits & Veggies</Text>
                   <Text style={[styles.trackerSubtitle, { color: themeColors.textSecondary }]}>
-                    {(dailyLog?.fruitsVeggiesServings ?? 0)} / 5 servings
+                    {(dailyLog?.fruitsVeggies ?? 0)} / 5 servings
                   </Text>
                 </View>
               </View>
