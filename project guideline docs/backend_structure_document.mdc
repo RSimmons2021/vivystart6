@@ -1,125 +1,81 @@
-# Backend Structure Documentation
+# Backend Structure Documentation (Updated April 2025)
 
 ## Architecture Overview
-The backend is built using Flask and Supabase (PostgreSQL), following a RESTful architecture with the following key components:
+The backend is centered on Supabase (PostgreSQL) for data storage and authentication, with Flask providing custom API endpoints and AI integration.
 
 ## Supabase Integration
-- Authentication System (Supabase Auth)
-- Relational Database Structure (PostgreSQL):
-  ```
-  Tables:
-    users
-      id (uuid, primary key)
-      name
-      email
-      start_date
-    measurements
-      id (uuid, primary key)
-      user_id (foreign key)
-      type (weight, steps, etc)
-      value
-      date
-    medications
-      id (uuid, primary key)
-      user_id (foreign key)
-      date
-      type
-      dosage
-      taken
-    goals
-      id (uuid, primary key)
-      user_id (foreign key)
-      title
-      description
-      progress
-      created
-    progress
-      id (uuid, primary key)
-      user_id (foreign key)
-      date
-      weight
-      steps
-      nutrition
-    chat_history
-      id (uuid, primary key)
-      user_id (foreign key)
-      message
-      is_user
-      timestamp
-  ```
+- **Authentication:** Supabase Auth (secure, real-time sessions)
+- **Database:** Supabase PostgreSQL
+- **Real-time Sync:** All logs (shots, weight, side effects) sync instantly
+- **Storage:** (Optional) Supabase Storage for files/images
+
+### Key Tables
+```
+users (
+  id uuid PRIMARY KEY,
+  name text,
+  email text,
+  start_date date
+)
+
+shots (
+  id uuid PRIMARY KEY,
+  user_id uuid REFERENCES users(id),
+  date date,
+  time time,
+  location text,
+  medication text,
+  notes text,
+  created_at timestamptz DEFAULT now()
+)
+
+weight_logs (
+  id uuid PRIMARY KEY,
+  user_id uuid REFERENCES users(id),
+  date date,
+  weight numeric,
+  notes text,
+  created_at timestamptz DEFAULT now()
+)
+
+side_effects (
+  id uuid PRIMARY KEY,
+  user_id uuid REFERENCES users(id),
+  date date,
+  effect text,
+  severity text,
+  notes text,
+  created_at timestamptz DEFAULT now()
+)
+```
+
+- All tables use Row Level Security (RLS) for privacy.
+- Real-time subscriptions are enabled for instant UI updates.
 
 ## Flask API Endpoints
+- **Auth:** (Most handled by Supabase)
+- **Health Data:**
+  - `GET /weight` - Retrieve weight history
+  - `POST /weight` - Log new weight
+  - `GET /shots` - Retrieve shot history
+  - `POST /shots` - Log new shot
+  - `GET /side-effects` - Retrieve side effect history
+  - `POST /side-effects` - Log new side effect
+- **AI/Coach:**
+  - `POST /ai/chat` - Send user query to Gemini AI and return response
 
-### Authentication Endpoints (To Be Implemented)
-- POST /auth/register
-- POST /auth/login
-- POST /auth/logout
-- GET /auth/user
+## Data Flow
+- **Frontend (React Native/Expo)** communicates directly with Supabase for CRUD operations and real-time sync.
+- **Flask** is used for advanced analytics, AI chat, and custom middleware.
 
-### Health Data Endpoints
-- GET /weight - Retrieve weight history
-- POST /weight - Log new weight
-- GET /steps - Get step count history
-- POST /steps - Log daily steps
+## Security
+- Supabase Auth for user authentication and session management
+- RLS policies to ensure users only access their own data
+- All API endpoints require authentication
 
-### Progress Endpoints
-- GET /progress - Get overall progress
-- POST /progress - Update progress metrics
-- GET /progress/stats - Get statistics and calculations
+## Extensibility
+- Easily add new tables or endpoints for future features (e.g., goals, activity, nutrition)
+- Integrate additional AI or analytics services via Flask
 
-### Goals Endpoints
-- GET /goals - List all goals
-- POST /add-goal - Create new goal
-- PUT /goals/{id} - Update goal
-- DELETE /goals/{id} - Delete goal
-
-### Coach Endpoints
-- GET /coach - Get coaching data
-- POST /gemini-chat - AI chat interaction
-- GET /coach/history - Get chat history
-
-### Journey Endpoints
-- GET /journey - Get journey milestones
-- POST /journey - Add journey milestone
-
-### Shots/Medication Endpoints
-- GET /shots - Get medication schedule
-- POST /shots - Log medication
-- GET /side-effects - Get side effects history
-- POST /side-effects - Log side effects
-
-## Error Handling
-- Standardized error responses
-- HTTP status codes alignment
-- Error logging and monitoring
-
-## Security Measures
-- Supabase Auth for authentication
-- Row Level Security (RLS) policies
-- CORS configuration
-- Input validation
-- Rate limiting (to be implemented)
-
-## Data Storage
-### Supabase Tables
-- users
-- measurements
-- medications
-- goals
-- progress
-- chat_history
-
-### Local Storage (Flask)
-- Temporary session data
-- Cache for frequently accessed data
-
-## API Response Format
-Standard JSON response structure:
-```json
-{
-  "success": boolean,
-  "data": object | array,
-  "message": string,
-  "errors": array (optional)
-}
-```
+---
+*This documentation reflects the backend structure and data flow as of April 2025. For schema details, see your Supabase dashboard or migration files.*

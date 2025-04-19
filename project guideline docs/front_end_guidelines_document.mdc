@@ -1,47 +1,45 @@
 ---
-description: 
+description: Updated front-end guidelines for VivyStart6 React Native + Supabase app
 globs: 
 alwaysApply: false
 ---
-# Front-end Development Guidelines
+# Front-end Development Guidelines (Updated April 2025)
 
 ## Code Organization
 
 ### Component Structure
 ```
 components/
-  common/     # Reusable components
-  features/   # Feature-specific components
-  layouts/    # Layout components
-  screens/    # Screen components
+  common/     # Reusable UI components (Button, Card, etc.)
+  features/   # Feature-specific components (Shots, Weight, SideEffects, etc.)
+  layouts/    # Layout components (Screen wrappers, SafeArea)
+  screens/    # Tab or page-level screens (ShotsScreen, CoachScreen, etc.)
 ```
+- Each component in its own file (TypeScript, .tsx)
+- Use hooks for state/effects
+- Keep business logic out of UI (use hooks)
 
 ### Styling Guidelines
 - Use StyleSheet.create for all styles
-- Follow atomic design principles
-- Maintain consistent color scheme:
-  ```javascript
-  const colors = {
-    primary: '#2563eb',
-    secondary: '#64748b',
-    background: '#f8fafc',
-    success: '#90EE90',
-    error: '#FF6B6B',
-    text: {
-      primary: '#1e293b',
-      secondary: '#64748b',
-    }
-  }
-  ```
+- Follow atomic design (atoms, molecules, organisms)
+- Consistent color scheme and spacing
+- Theme support via context/store
+- Use scalable units (rem, % where possible)
+- Accessible color contrast
 
 ## Component Guidelines
 
 ### Best Practices
 1. Use functional components with hooks
-2. Implement error boundaries
-3. Optimize re-renders using useMemo and useCallback
-4. Maintain proper TypeScript typing
-5. Follow component naming conventions
+2. Strict TypeScript typing for all props and state
+3. Modular, reusable components
+4. Implement error boundaries for critical screens
+5. Optimize re-renders with useMemo and useCallback
+6. Use context for global state (theme, user, health data)
+7. Prefer optimistic UI updates for fast feedback
+8. Use custom pickers (e.g., TimePickerWheel) for better UX
+9. Integrate real-time updates with Supabase subscriptions
+10. Document all public components with JSDoc
 
 ### Component Template
 ```typescript
@@ -52,82 +50,30 @@ interface ComponentProps {
   // Props definition
 }
 
-export const Component: React.FC<ComponentProps> = ({ props }) => {
+export const Component: React.FC<ComponentProps> = ({ ...props }) => {
   // State and hooks
-  
   // Event handlers
-  
-  // Render methods
-  
-  return (
-    <View style={styles.container}>
-      {/* Component content */}
-    </View>
-  );
+  // Render
+  return <View />;
 };
 
 const styles = StyleSheet.create({
-  // Component styles
+  // ...styles
 });
 ```
 
-## State Management
-- Use React hooks for local state
-- Follow state immutability patterns
-- Implement proper loading states
-- Handle error states consistently
+## Feature Flows
+- **Shots:** Calendar, add/edit/delete, time/location/medication, real-time sync
+- **Weight:** Daily log, trends, real-time sync
+- **Side Effects:** Log, review, delete, real-time sync
+- **Coach:** AI chat, weight log, advice
+- **Progress:** Charts for weight, shots, goals
 
-## Navigation Guidelines
-- Use Expo Router for navigation
-- Maintain clear route naming
-- Implement proper deep linking
-- Handle navigation state persistence
+## Testing & Linting
+- All components and hooks must have tests
+- Use Prettier and ESLint (strict rules)
+- No `any` types allowed
+- 80%+ test coverage required
 
-## Performance Guidelines
-1. Implement list virtualization
-2. Optimize image loading
-3. Use proper memoization
-4. Implement proper error boundaries
-5. Handle offline functionality
-
-## Testing Guidelines
-1. Write component unit tests
-2. Implement integration tests
-3. Use React Native Testing Library
-4. Test error scenarios
-5. Maintain good test coverage
-
-## Accessibility Guidelines
-1. Implement proper keyboard navigation
-2. Use semantic HTML elements
-3. Provide alternative text for images
-4. Support screen readers
-5. Test with accessibility tools
-
-## Animation Guidelines
-1. Use React Native Reanimated
-2. Implement smooth transitions
-3. Handle gesture interactions
-4. Optimize animation performance
-5. Follow iOS/Android guidelines
-
-## Form Handling
-1. Implement proper validation
-2. Show clear error messages
-3. Handle submission states
-4. Support form autofill
-5. Implement proper keyboard handling
-
-## API Integration
-1. Use proper error handling
-2. Implement loading states
-3. Handle offline scenarios
-4. Cache API responses
-5. Implement retry logic
-
-## Code Quality
-1. Use ESLint for code linting
-2. Follow Prettier formatting
-3. Maintain consistent naming
-4. Write proper documentation
-5. Follow TypeScript best practices
+---
+*These guidelines ensure a scalable, maintainable, and modern front-end for VivyStart6.*

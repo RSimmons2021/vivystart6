@@ -1,186 +1,70 @@
 ---
-description: 
-globs: 
+description: Updated project rules and best practices for VivyStart6 React Native + Supabase app
+globs:
 alwaysApply: false
 ---
-# Project Rules and Best Practices
+# Project Rules and Best Practices (Updated April 2025)
 
 ## 1. Code Quality Standards
 
 ### Naming Conventions
-- Use PascalCase for component names: `ProgressChart`, `WeightTracker`
-- Use camelCase for variables and functions: `handleSubmit`, `userData`
-- Use UPPER_SNAKE_CASE for constants: `API_ENDPOINT`, `MAX_RETRIES`
-- Prefix interface names with 'I': `IUserProfile`, `IWeightData`
+- Use **PascalCase** for components: `ShotsScreen`, `TimePickerWheel`
+- Use **camelCase** for variables/functions: `handleAddShot`, `fetchShots`
+- Use **UPPER_SNAKE_CASE** for constants: `API_URL`, `DEFAULT_TIME`
+- Prefix interfaces with `I`: `IShot`, `IWeightLog`
 
 ### Code Structure
-- One component per file
-- Maximum file length: 300 lines
-- Maximum function length: 30 lines
-- Maximum component complexity: 15 (cognitive complexity)
+- One component per file (max 300 lines per file)
+- Functions should not exceed 30 lines
+- Use atomic design for components (atoms, molecules, organisms)
+- Keep business logic out of UI components (use hooks)
 
 ### TypeScript Usage
-- Enable strict mode
-- No `any` types allowed
-- Define interfaces for all props
-- Use proper type imports/exports
-- Document complex types
+- Strict mode enabled, no `any` types
+- All props/interfaces/types must be documented
+- Use type imports/exports
+- Prefer interfaces over types for objects
 
 ## 2. Development Workflow
 
 ### Git Workflow
-- Use feature branches
-- Branch naming: `feature/feature-name`
-- Commit message format: `type(scope): message`
-  - Types: feat, fix, docs, style, refactor, test, chore
+- Use feature branches: `feature/short-description`
+- Commit messages: `type(scope): message` (feat, fix, docs, style, refactor, test, chore)
 - Squash commits before merging
 - Require code review for all PRs
+- Pull request template required
 
 ### Code Review Guidelines
-- Maximum 400 lines per review
+- Max 400 lines per review
 - Review within 24 hours
-- Use pull request templates
-- Enforce linting rules
-- Check test coverage
+- Enforce linting and Prettier formatting
+- Check for test coverage and TypeScript errors
 
 ### Testing Requirements
-- Unit tests for all components
-- Integration tests for flows
+- Unit tests for all components and hooks
+- Integration tests for feature flows (shots, weight, side effects)
 - Minimum 80% coverage
-- Test all error scenarios
-- Mock external dependencies
+- Test all error and edge cases
+- Mock Supabase and external APIs in tests
 
 ## 3. Architecture Rules
 
 ### Component Structure
-- Follow atomic design
-- Implement error boundaries
-- Use proper prop drilling
-- Maintain pure components
-- Follow single responsibility
+- Follow atomic design principles
+- Use hooks for state and side effects
+- Implement error boundaries where needed
+- Keep components pure and single-responsibility
+- Use optimistic UI for data mutations (update UI before server confirms)
+- Real-time sync via Supabase subscriptions
 
 ### State Management
-- Use hooks for local state
-- Document state updates
-- Implement proper caching
-- Handle loading states
-- Manage side effects
+- Local state for UI logic
+- Context/hooks for shared state (user, theme, health data)
+- No Redux or MobX (unless scaling requires it)
 
-### API Integration
-- Use TypeScript interfaces
-- Implement retry logic
-- Handle errors gracefully
-- Cache responses
-- Version all endpoints
+## 4. Documentation
+- All public components and functions must have JSDoc comments
+- Update guideline docs with every major feature or architecture change
 
-## 4. Performance Rules
-
-### Optimization
-- Lazy load components
-- Implement code splitting
-- Optimize images
-- Use proper memoization
-- Monitor bundle size
-
-### Memory Management
-- Clean up event listeners
-- Implement proper unmounting
-- Handle memory leaks
-- Monitor heap usage
-- Cache responsibly
-
-## 5. Security Rules
-
-### Data Protection
-- Encrypt sensitive data
-- Implement proper validation
-- Use secure storage
-- Handle tokens properly
-- Follow HIPAA guidelines
-
-### API Security
-- Implement rate limiting
-- Validate all inputs
-- Use proper authentication
-- Handle sensitive data
-- Log security events
-
-## 6. Documentation Rules
-
-### Code Documentation
-- Document all components
-- Explain complex logic
-- Update README regularly
-- Document API endpoints
-- Maintain changelog
-
-### Project Documentation
-- Keep design docs updated
-- Document dependencies
-- Maintain setup guide
-- Include troubleshooting
-- Document workflows
-
-## 7. Monitoring and Maintenance
-
-### Error Tracking
-- Implement error logging
-- Monitor performance
-- Track API failures
-- Log user actions
-- Monitor metrics
-
-### Quality Checks
-- Run regular audits
-- Check dependencies
-- Monitor test coverage
-- Review error logs
-- Update documentation
-
-## 8. Deployment Rules
-
-### Release Process
-- Use semantic versioning
-- Create release notes
-- Test in staging
-- Backup before deploy
-- Monitor post-deploy
-
-### Environment Management
-- Use .env files
-- Document variables
-- Separate configs
-- Secure credentials
-- Version control
-
-## 9. Communication Rules
-
-### Team Collaboration
-- Daily updates
-- Weekly reviews
-- Document decisions
-- Share knowledge
-- Maintain wiki
-
-### Issue Management
-- Use issue templates
-- Add proper labels
-- Link to PRs
-- Update status
-- Track progress
-
-## 10. Code Health
-
-### Maintenance
-- Regular refactoring
-- Remove dead code
-- Update dependencies
-- Fix warnings
-- Maintain patterns
-
-### Technical Debt
-- Document debt items
-- Plan resolutions
-- Track impact
-- Regular cleanup
-- Prioritize fixes
+---
+*These rules ensure maintainability, scalability, and a consistent developer experience for the VivyStart6 health tracking app.*

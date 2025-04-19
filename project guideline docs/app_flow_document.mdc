@@ -1,9 +1,9 @@
 ---
-description: 
-globs: 
+description: Updated application flow to match the current GLP-1 health tracking app, including Shots, Weight, Side Effects, AI Coach, and Supabase integration.
+globs:
 alwaysApply: false
 ---
-# Application Flow Documentation
+# Application Flow Documentation (Updated)
 
 ## User Journey Flow
 
@@ -16,6 +16,11 @@ alwaysApply: false
 ```
 Journey Tab → Goals Tab → Coach Tab → Shots Tab → Progress Tab
 ```
+- **Journey:** Timeline and milestones for GLP-1 treatment
+- **Goals:** Daily and custom goals (water, nutrition, steps, etc.)
+- **Coach:** AI chat, advice, and weight logging
+- **Shots:** Calendar-based logging for medication shots, weight, and side effects
+- **Progress:** Charts and analytics for weight, shots, and goals
 
 ### 3. Feature Flows
 
@@ -51,7 +56,7 @@ graph TD
     E --> G[Progress Charts]
 ```
 
-#### Shots Tab Flow
+#### Shots Tab Flow (Updated)
 ```mermaid
 graph TD
     A[Shots Screen] --> B[Calendar View]
@@ -59,52 +64,35 @@ graph TD
     B --> D[Weight Logging]
     B --> E[Side Effects]
     C --> F[Shot History]
-    D --> G[Weight Trends]
+    D --> G[Weight History]
     E --> H[Side Effects History]
+    B --> I[Add/Edit/Delete Entries]
 ```
+- **Add/Edit/Delete:** Each log (shot, weight, side effect) supports add, edit, and delete with confirmation dialogs.
+- **Time Selection:** Uses a custom TimePickerWheel for intuitive time entry.
+- **Supabase Integration:** All logs are synced in real-time with Supabase (PostgreSQL) backend.
 
 #### Progress Tab Flow
 ```mermaid
 graph TD
-    A[Progress Screen] --> B[Steps Input]
-    A --> C[Weekly Score]
-    A --> D[Weight Metrics]
-    B --> E[Steps History]
-    C --> F[Progress Charts]
-    D --> G[Weight Analysis]
+    A[Progress Screen] --> B[Charts]
+    B --> C[Weight Trend]
+    B --> D[Shots Trend]
+    B --> E[Goal Progress]
 ```
 
-## Data Flow
+### 4. Backend & Data Flow
+- **Authentication:** Supabase Auth (secure, real-time sessions)
+- **Data Storage:** Supabase PostgreSQL
+- **Real-time Sync:** All logs (shots, weight, side effects) sync instantly
+- **API:** Flask endpoints for extended backend logic (AI, analytics, etc.)
+- **AI Coach:** Integrates with Google Gemini AI for chat and advice
 
-### User Input Flow
-1. User enters data (steps/weight/goals)
-2. Frontend validation
-3. API request to backend
-4. Firebase storage update
-5. UI update with confirmation
+### 5. User Experience Highlights
+- **Consistent, modern UI** with confirmation dialogs for destructive actions
+- **Optimistic UI updates** for fast feedback
+- **Strict type safety** and modular codebase (React Native + TypeScript)
+- **Accessible and mobile-first design**
 
-### Data Retrieval Flow
-1. Screen mount/refresh
-2. API request to backend
-3. Backend fetches from Firebase
-4. Data processing/calculations
-5. UI update with data
-
-### Real-time Updates
-1. Firebase listeners for relevant data
-2. Backend event processing
-3. WebSocket/real-time updates (planned)
-4. UI refresh with new data
-
-## Error Handling Flow
-1. User input validation
-2. Network error handling
-3. Backend validation
-4. Error display to user
-5. Error logging for monitoring
-
-## State Management
-- Local component state for UI
-- Context/Redux for global state (planned)
-- Cached data management
-- Offline data handling (planned)
+---
+*This documentation reflects the actual app structure, navigation, and backend as of April 2025. For technical details, see backend_structure_document.mdc and tech_stack_document.mdc.*

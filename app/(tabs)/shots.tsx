@@ -587,11 +587,6 @@ export default function ShotsScreen() {
                   <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                     No shots recorded for this date
                   </Text>
-                  {__DEV__ && (
-                    <Text style={{ color: 'red', fontSize: 10 }}>
-                      DEBUG: {JSON.stringify(shots)}
-                    </Text>
-                  )}
                 </View>
               ) : (
                 selectedDateShots.map(shot => (
@@ -667,11 +662,6 @@ export default function ShotsScreen() {
                   <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                     No weight recorded for this date
                   </Text>
-                  {__DEV__ && (
-                    <Text style={{ color: 'red', fontSize: 10 }}>
-                      DEBUG: {JSON.stringify(weightLogs)}
-                    </Text>
-                  )}
                 </View>
               ) : (
                 selectedDateWeight.map((log, index) => (
@@ -722,18 +712,13 @@ export default function ShotsScreen() {
                   <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                     No side effects recorded for this date
                   </Text>
-                  {__DEV__ && (
-                    <Text style={{ color: 'red', fontSize: 10 }}>
-                      DEBUG: {JSON.stringify(sideEffects)}
-                    </Text>
-                  )}
                 </View>
               ) : (
                 selectedDateSideEffects.map((effect, index) => (
                   <Card key={index} style={styles.dataCard}>
                     <View style={styles.dataCardHeader}>
                       <TouchableOpacity onPress={() => setPendingDeleteSideEffectId(effect.id)}>
-                        <X size={18} color={themeColors.textTertiary} />
+                        <X size={18} color="#FF3B30" />
                       </TouchableOpacity>
                       <View style={styles.dataCardTitle}>
                         <ThermometerSun size={18} color="#0984e3" />
