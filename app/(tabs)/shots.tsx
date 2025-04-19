@@ -24,7 +24,7 @@ import {
 } from 'lucide-react-native';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
-import { TimePickerWheel } from '../components/TimePickerWheel';
+import TimePickerWheel from '../components/TimePickerWheel';
 import { useThemeStore } from '../../store/theme-store';
 import { useUserStore } from '../../store/user-store';
 import { useHealthStore } from '../../store/health-store';
