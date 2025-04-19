@@ -281,7 +281,7 @@ export default function ShotsScreen() {
 
   // Shot handlers
   const openShotModal = () => {
-    setTime('');
+    setTime('07:00 AM'); // Set your preferred default value here
     setLocation('');
     setNotes('');
     setSelectedMedication(GLP1_MEDICATIONS[0]);
