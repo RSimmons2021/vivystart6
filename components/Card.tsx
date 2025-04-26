@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import Colors from '@/constants/colors';
 import { useThemeStore } from '@/store/theme-store';
 
@@ -25,7 +25,7 @@ export const Card: React.FC<CardProps> = ({ children, style, noPadding = false }
         style
       ]}
     >
-      <Text>{children}</Text>
+      {children}
     </View>
   );
 };

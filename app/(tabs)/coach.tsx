@@ -421,7 +421,7 @@ export default function CoachScreen() {
     setInputMessage('');
     try {
       // Call Gemini chat endpoint (existing logic)
-      const response = await fetch('http://localhost:5000/ai/chat', {
+      const response = await fetch('https://xkjixvyxiaphavaptmfl.functions.supabase.co/gemini-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.id, message: inputMessage })
