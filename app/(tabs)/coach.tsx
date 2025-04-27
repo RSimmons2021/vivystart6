@@ -420,17 +420,28 @@ export default function CoachScreen() {
     if (userMsg) setMessages(prev => [...prev, userMsg]);
     setInputMessage('');
     try {
+      // --- DEBUG: Log user and token ---
+      const session = await supabase.auth.getSession();
+      const accessToken = session?.data?.session?.access_token;
+      console.log('[CoachScreen] user:', user);
+      console.log('[CoachScreen] accessToken:', accessToken);
       // Call Gemini chat endpoint (existing logic)
       const response = await fetch('https://xkjixvyxiaphavaptmfl.functions.supabase.co/gemini-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+        },
         body: JSON.stringify({ user_id: user.id, message: inputMessage })
       });
       const data = await response.json();
+      // --- DEBUG: Log AI response ---
+      console.log('[CoachScreen] AI response:', data);
       const aiMsg = await saveChatMessage(user.id, data.reply, false);
       if (aiMsg) setMessages(prev => [...prev, aiMsg]);
     } catch (e) {
       // Optionally show error message
+      console.error('[CoachScreen] Error sending message:', e);
     }
     setLoading(false);
   };

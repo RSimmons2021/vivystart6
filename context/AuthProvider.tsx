@@ -10,9 +10,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { fetchUser } = useUserStore();
 
   useEffect(() => {
+    console.log('[AuthProvider] Running checkSession on mount');
     auth.checkSession();
     // Listen for auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthProvider] onAuthStateChange event:', event, 'session:', session);
       auth.setUser(session?.user ?? null);
       if (session?.user?.id) {
         fetchUser(session.user.id);
@@ -23,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Also fetch user profile if auth.user changes (covers initial mount)
   useEffect(() => {
+    console.log('[AuthProvider] auth.user changed:', auth.user);
     if (auth.user?.id) {
       fetchUser(auth.user.id);
     }
