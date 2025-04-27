@@ -15,7 +15,8 @@ import {
   X, 
   Camera, 
   Image as ImageIcon, 
-  Plus 
+  Plus,
+  Trash2
 } from 'lucide-react-native';
 import { Card } from '@/components/Card';
 import { MultiRingProgress } from '@/components/MultiRingProgress';
@@ -25,6 +26,8 @@ import { useThemeStore } from '@/store/theme-store';
 import { useHealthStore } from '@/store/health-store';
 import Colors from '@/constants/colors';
 import { format, startOfWeek, endOfWeek, parseISO, subDays } from 'date-fns';
+import * as ImagePicker from 'expo-image-picker';
+import { TextInput } from 'react-native';
 
 // Conversion functions
 const kgToLbs = (kg: number) => Math.round(kg * 2.20462);
@@ -35,11 +38,76 @@ export default function ProgressScreen() {
   const { isDarkMode } = useThemeStore();
   const { weightUnit } = useUserStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  const { meals, addMeal, weightLogs, addWeightLog, dailyLogs, getWeeklyScore, fetchWeightLogs, fetchDailyLogs, fetchStepLogs } = useHealthStore();
+  const { meals, addMeal, deleteMeal, weightLogs, addWeightLog, dailyLogs, getWeeklyScore, fetchWeightLogs, fetchDailyLogs, fetchStepLogs, fetchMeals } = useHealthStore();
   const [loading, setLoading] = useState(false);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [modalVisible, setModalVisible] = useState(false);
   const [mealModalVisible, setMealModalVisible] = useState(false);
+
+  const [addMealForm, setAddMealForm] = useState({
+    imageUri: '',
+    name: '',
+    description: '',
+    fruitsVeggies: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+  });
+  const [addMealError, setAddMealError] = useState<string | null>(null);
+  const [addMealLoading, setAddMealLoading] = useState(false);
+
+  const resetAddMealForm = () => setAddMealForm({
+    imageUri: '',
+    name: '',
+    description: '',
+    fruitsVeggies: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+  });
+
+  const handlePickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setAddMealForm(f => ({ ...f, imageUri: result.assets[0].uri }));
+    }
+  };
+
+  const handleAddMealSubmit = async () => {
+    setAddMealLoading(true);
+    setAddMealError(null);
+    try {
+      await addMeal({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        time: format(new Date(), 'HH:mm'),
+        name: addMealForm.name,
+        description: addMealForm.description,
+        imageUri: addMealForm.imageUri,
+        fruitsVeggies: parseInt(addMealForm.fruitsVeggies) || 0,
+        protein: parseInt(addMealForm.protein) || 0,
+        carbs: parseInt(addMealForm.carbs) || 0,
+        fat: parseInt(addMealForm.fat) || 0,
+        calories: 0, // You may want to calculate this
+      });
+      await fetchMeals();
+      setMealModalVisible(false);
+      resetAddMealForm();
+    } catch (e) {
+      setAddMealError('Failed to add meal.');
+    } finally {
+      setAddMealLoading(false);
+    }
+  };
+
+  const handleDeleteAddMeal = () => {
+    resetAddMealForm();
+    setMealModalVisible(false);
+  };
 
   // Defensive check: show loading or error if user not found
   if (!user) {
@@ -60,28 +128,14 @@ export default function ProgressScreen() {
     }
   };
 
-  const handleAddMeal = async () => {
-    setMealModalVisible(false);
-    try {
-      await addMeal({
-        date: format(new Date(), 'yyyy-MM-dd'),
-        time: format(new Date(), 'HH:mm'),
-        name: 'Healthy Meal',
-        description: 'A balanced meal with protein and vegetables',
-        imageUri: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-        fruitsVeggies: 2,
-        protein: 25,
-        calories: 450,
-        carbs: 30,
-        fat: 15,
-      });
-    } catch (e) {
-      console.error('Failed to add meal.');
-    }
-  };
-  
   const recentMeals = [...meals]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      // Sort by date descending, then by time descending if dates are equal
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      // Compare time as HH:mm strings
+      return (b.time || '').localeCompare(a.time || '');
+    })
     .slice(0, 5);
   
   // Calculate weekly score (fruitsVeggies, protein, steps, overall)
@@ -109,7 +163,8 @@ export default function ProgressScreen() {
       await Promise.all([
         fetchWeightLogs(),
         fetchDailyLogs(),
-        fetchStepLogs()
+        fetchStepLogs(),
+        fetchMeals()
       ]);
       setLoading(false);
     })();
@@ -278,11 +333,11 @@ export default function ProgressScreen() {
         </View>
         
         {recentMeals.length === 0 ? (
-          <Card style={[styles.emptyMealsCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.emptyMealsText, { color: themeColors.textSecondary }]}>No meals logged yet</Text>
-            <Text style={[styles.emptyMealsSubtext, { color: themeColors.textTertiary }]}>
-              Tap the + button to log your first meal
-            </Text>
+          <Card style={[styles.emptyMealsCard, { backgroundColor: themeColors.card }]}> 
+            <View>
+              <Text style={[styles.emptyMealsText, { color: themeColors.textSecondary }]}>No meals logged yet</Text>
+              <Text style={[styles.emptyMealsSubtext, { color: themeColors.textTertiary }]}>Tap the + button to log your first meal</Text>
+            </View>
           </Card>
         ) : (
           recentMeals.map((meal, index) => (
@@ -350,6 +405,9 @@ export default function ProgressScreen() {
                   )}
                 </View>
               )}
+              <TouchableOpacity style={styles.deleteButton} onPress={async () => { await deleteMeal(meal.id); await fetchMeals(); }}>
+                <Trash2 size={22} color={Colors.error} />
+              </TouchableOpacity>
             </Card>
           ))
         )}
@@ -454,45 +512,87 @@ export default function ProgressScreen() {
         onRequestClose={() => setMealModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>  
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>Log Meal</Text>
               <TouchableOpacity onPress={() => setMealModalVisible(false)}>
                 <X size={24} color={themeColors.text} />
               </TouchableOpacity>
             </View>
-            
-            <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>How would you like to log your meal?</Text>
-            
-            <View style={styles.mealOptions}>
-              <TouchableOpacity style={styles.mealOption} onPress={handleAddMeal}>
-                <View style={[styles.mealOptionIcon, { backgroundColor: themeColors.accent }]}>
-                  <Camera size={24} color={themeColors.card} />
-                </View>
-                <Text style={[styles.mealOptionText, { color: themeColors.text }]}>Camera</Text>
+            <ScrollView style={{ maxHeight: 500 }}>
+              <TouchableOpacity style={styles.imagePicker} onPress={handlePickImage}>
+                {addMealForm.imageUri ? (
+                  <Image source={{ uri: addMealForm.imageUri }} style={styles.addMealImage} />
+                ) : (
+                  <View style={styles.addMealImagePlaceholder}>
+                    <Camera size={32} color={themeColors.textTertiary} />
+                    <Text style={{ color: themeColors.textTertiary, marginTop: 8 }}>Add Photo (Optional)</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.mealOption} onPress={handleAddMeal}>
-                <View style={[styles.mealOptionIcon, { backgroundColor: themeColors.secondary }]}>
-                  <ImageIcon size={24} color={themeColors.card} />
-                </View>
-                <Text style={[styles.mealOptionText, { color: themeColors.text }]}>Photos</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.mealOption} onPress={handleAddMeal}>
-                <View style={[styles.mealOptionIcon, { backgroundColor: themeColors.success }]}>
-                  <Text style={[styles.mealOptionIconText, { color: themeColors.card }]}>T</Text>
-                </View>
-                <Text style={[styles.mealOptionText, { color: themeColors.text }]}>Describe</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.mealOption} onPress={handleAddMeal}>
-                <View style={[styles.mealOptionIcon, { backgroundColor: themeColors.info }]}>
-                  <Text style={[styles.mealOptionIconText, { color: themeColors.card }]}>🍽️</Text>
-                </View>
-                <Text style={[styles.mealOptionText, { color: themeColors.text }]}>Saved Meals</Text>
-              </TouchableOpacity>
-            </View>
+              <TextInput
+                style={[styles.input, { color: themeColors.text }]}
+                placeholder="Meal Title"
+                placeholderTextColor={themeColors.textTertiary}
+                value={addMealForm.name}
+                onChangeText={text => setAddMealForm(f => ({ ...f, name: text }))}
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text, minHeight: 60 }]}
+                placeholder="Description"
+                placeholderTextColor={themeColors.textTertiary}
+                value={addMealForm.description}
+                onChangeText={text => setAddMealForm(f => ({ ...f, description: text }))}
+                multiline
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text }]}
+                placeholder="Fruits & Veggies (servings)"
+                placeholderTextColor={themeColors.textTertiary}
+                value={addMealForm.fruitsVeggies}
+                onChangeText={text => setAddMealForm(f => ({ ...f, fruitsVeggies: text }))}
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text }]}
+                placeholder="Protein (grams)"
+                placeholderTextColor={themeColors.textTertiary}
+                value={addMealForm.protein}
+                onChangeText={text => setAddMealForm(f => ({ ...f, protein: text }))}
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text }]}
+                placeholder="Carbs (grams)"
+                placeholderTextColor={themeColors.textTertiary}
+                value={addMealForm.carbs}
+                onChangeText={text => setAddMealForm(f => ({ ...f, carbs: text }))}
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text }]}
+                placeholder="Fat (grams)"
+                placeholderTextColor={themeColors.textTertiary}
+                value={addMealForm.fat}
+                onChangeText={text => setAddMealForm(f => ({ ...f, fat: text }))}
+                keyboardType="numeric"
+              />
+              {addMealError && (
+                <Text style={{ color: Colors.error, marginTop: 8, textAlign: 'center' }}>{addMealError}</Text>
+              )}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 16 }}>
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAddMeal}>
+                  <Trash2 size={22} color={Colors.error} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, { marginLeft: 16, opacity: addMealLoading ? 0.5 : 1 }]}
+                  onPress={handleAddMealSubmit}
+                  disabled={addMealLoading}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -725,38 +825,51 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  mealOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    fontSize: 16,
+    backgroundColor: Colors.backgroundSecondary,
   },
-  mealOption: {
-    width: '48%',
+  imagePicker: {
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  mealOptionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
     justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  addMealImage: {
+    width: 180,
+    height: 120,
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
+  addMealImagePlaceholder: {
+    width: 180,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  mealOptionIconText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  mealOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  loadingText: {
-    fontSize: 24,
+  deleteButton: {
+    backgroundColor: 'transparent',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.card,
   },
 });

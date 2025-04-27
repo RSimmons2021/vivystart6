@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   ScrollView, 
   Image, 
-  TouchableOpacity 
+  TouchableOpacity,
+  TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -25,13 +26,11 @@ import { format, parseISO } from 'date-fns';
 
 export default function MealDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { meals, saveMeal, unsaveMeal, deleteMeal } = useHealthStore();
+  const { meals, saveMeal, unsaveMeal, deleteMeal, updateMeal } = useHealthStore();
   
   const meal = meals.find(m => m.id === id);
-  
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
+  // Early return if meal is not found
   if (!meal) {
     return (
       <SafeAreaView style={styles.container}>
@@ -41,7 +40,38 @@ export default function MealDetailScreen() {
       </SafeAreaView>
     );
   }
-  
+
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValues, setEditValues] = React.useState({
+    name: meal.name,
+    description: meal.description,
+    calories: meal.calories,
+    protein: meal.protein,
+    carbs: meal.carbs,
+    fat: meal.fat,
+    fruitsVeggies: meal.fruitsVeggies,
+    imageUri: meal.imageUri,
+  });
+
+  const handleEditChange = (field: keyof typeof editValues, value: string | number) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveEdit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await updateMeal(meal.id, editValues);
+      setIsEditing(false);
+    } catch (e) {
+      setError('Failed to update meal.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleToggleSave = async () => {
     setLoading(true);
     setError(null);
@@ -81,10 +111,18 @@ export default function MealDetailScreen() {
             resizeMode="cover"
           />
         )}
-        
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.mealName}>{meal.name}</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.mealName}
+                value={editValues.name}
+                onChangeText={(text) => handleEditChange('name', text)}
+                editable={!loading}
+              />
+            ) : (
+              <Text style={styles.mealName}>{meal.name}</Text>
+            )}
             <View style={styles.actions}>
               <TouchableOpacity 
                 style={[
@@ -107,13 +145,18 @@ export default function MealDetailScreen() {
               >
                 <Trash2 size={20} color={Colors.error} />
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => setIsEditing((prev) => !prev)}
+                disabled={loading}
+              >
+                <Text style={{ color: Colors.primary }}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          
           {error && (
             <Text style={{ color: Colors.error, textAlign: 'center', marginVertical: 8 }}>{error}</Text>
           )}
-          
           <View style={styles.metaInfo}>
             <View style={styles.metaItem}>
               <Calendar size={16} color={Colors.textSecondary} />
@@ -126,59 +169,114 @@ export default function MealDetailScreen() {
               <Text style={styles.metaText}>{meal.time}</Text>
             </View>
           </View>
-          
-          {meal.description && (
+          {isEditing ? (
             <Card style={styles.descriptionCard}>
-              <Text style={styles.descriptionText}>{meal.description}</Text>
+              <TextInput
+                style={styles.descriptionText}
+                value={editValues.description}
+                onChangeText={(text) => handleEditChange('description', text)}
+                editable={!loading}
+                multiline
+              />
             </Card>
+          ) : (
+            meal.description && (
+              <Card style={styles.descriptionCard}>
+                <Text style={styles.descriptionText}>{meal.description}</Text>
+              </Card>
+            )
           )}
-          
           <Text style={styles.sectionTitle}>Nutrition</Text>
           <View style={styles.nutritionGrid}>
-            {meal.calories && (
-              <Card style={styles.nutritionCard}>
-                <Flame size={20} color={Colors.primary} />
+            <Card style={styles.nutritionCard}>
+              <Flame size={20} color={Colors.primary} />
+              {isEditing ? (
+                <TextInput
+                  style={styles.nutritionValue}
+                  value={String(editValues.calories)}
+                  onChangeText={(text) => handleEditChange('calories', parseInt(text) || 0)}
+                  editable={!loading}
+                  keyboardType="numeric"
+                />
+              ) : (
                 <Text style={styles.nutritionValue}>{meal.calories}</Text>
-                <Text style={styles.nutritionLabel}>Calories</Text>
-              </Card>
-            )}
-            
-            {meal.protein && (
-              <Card style={styles.nutritionCard}>
-                <Drumstick size={20} color={Colors.protein} />
+              )}
+              <Text style={styles.nutritionLabel}>Calories</Text>
+            </Card>
+            <Card style={styles.nutritionCard}>
+              <Drumstick size={20} color={Colors.protein} />
+              {isEditing ? (
+                <TextInput
+                  style={styles.nutritionValue}
+                  value={String(editValues.protein)}
+                  onChangeText={(text) => handleEditChange('protein', parseInt(text) || 0)}
+                  editable={!loading}
+                  keyboardType="numeric"
+                />
+              ) : (
                 <Text style={styles.nutritionValue}>{meal.protein}g</Text>
-                <Text style={styles.nutritionLabel}>Protein</Text>
-              </Card>
-            )}
-            
-            {meal.carbs && (
-              <Card style={styles.nutritionCard}>
-                <View style={styles.carbsIcon}>
-                  <Text style={styles.carbsIconText}>C</Text>
-                </View>
+              )}
+              <Text style={styles.nutritionLabel}>Protein</Text>
+            </Card>
+            <Card style={styles.nutritionCard}>
+              <View style={styles.carbsIcon}>
+                <Text style={styles.carbsIconText}>C</Text>
+              </View>
+              {isEditing ? (
+                <TextInput
+                  style={styles.nutritionValue}
+                  value={String(editValues.carbs)}
+                  onChangeText={(text) => handleEditChange('carbs', parseInt(text) || 0)}
+                  editable={!loading}
+                  keyboardType="numeric"
+                />
+              ) : (
                 <Text style={styles.nutritionValue}>{meal.carbs}g</Text>
-                <Text style={styles.nutritionLabel}>Carbs</Text>
-              </Card>
-            )}
-            
-            {meal.fat && (
-              <Card style={styles.nutritionCard}>
-                <View style={styles.fatIcon}>
-                  <Text style={styles.fatIconText}>F</Text>
-                </View>
+              )}
+              <Text style={styles.nutritionLabel}>Carbs</Text>
+            </Card>
+            <Card style={styles.nutritionCard}>
+              <View style={styles.fatIcon}>
+                <Text style={styles.fatIconText}>F</Text>
+              </View>
+              {isEditing ? (
+                <TextInput
+                  style={styles.nutritionValue}
+                  value={String(editValues.fat)}
+                  onChangeText={(text) => handleEditChange('fat', parseInt(text) || 0)}
+                  editable={!loading}
+                  keyboardType="numeric"
+                />
+              ) : (
                 <Text style={styles.nutritionValue}>{meal.fat}g</Text>
-                <Text style={styles.nutritionLabel}>Fat</Text>
-              </Card>
-            )}
-            
-            {meal.fruitsVeggies && (
-              <Card style={styles.nutritionCard}>
-                <Leaf size={20} color={Colors.fruits} />
+              )}
+              <Text style={styles.nutritionLabel}>Fat</Text>
+            </Card>
+            <Card style={styles.nutritionCard}>
+              <Leaf size={20} color={Colors.fruits} />
+              {isEditing ? (
+                <TextInput
+                  style={styles.nutritionValue}
+                  value={String(editValues.fruitsVeggies)}
+                  onChangeText={(text) => handleEditChange('fruitsVeggies', parseInt(text) || 0)}
+                  editable={!loading}
+                  keyboardType="numeric"
+                />
+              ) : (
                 <Text style={styles.nutritionValue}>{meal.fruitsVeggies}</Text>
-                <Text style={styles.nutritionLabel}>Servings</Text>
-              </Card>
-            )}
+              )}
+              <Text style={styles.nutritionLabel}>Servings</Text>
+            </Card>
           </View>
+          {isEditing && (
+            <TouchableOpacity
+              style={[styles.saveButton, loading && { opacity: 0.5 }]}
+              onPress={handleSaveEdit}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -310,6 +408,19 @@ const styles = StyleSheet.create({
   fatIconText: {
     fontSize: 14,
     fontWeight: 'bold',
+    color: Colors.card,
+  },
+  saveButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  saveButtonText: {
+    fontSize: 16,
     color: Colors.card,
   },
 });

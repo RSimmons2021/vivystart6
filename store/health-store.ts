@@ -46,6 +46,7 @@ interface HealthState {
   deleteMeal: (id: string) => void;
   saveMeal: (id: string) => void;
   unsaveMeal: (id: string) => void;
+  fetchMeals: () => Promise<void>;
   
   // Water methods
   addWaterLog: (log: Omit<WaterLog, 'id'>) => void;
@@ -462,6 +463,26 @@ export const useHealthStore = create<HealthState>()(
             meals: state.meals.map(meal => meal.id === id ? { ...meal, isSaved: false, date: ensureString(meal.date) } : meal)
           }));
         } catch (e) { /* handle error */ }
+      },
+      fetchMeals: async () => {
+        if (!supabase) {
+          console.error('Supabase not initialized in fetchMeals');
+          return;
+        }
+        const user = useUserStore.getState().user;
+        if (!user?.id) {
+          console.error('No user ID for fetchMeals');
+          return;
+        }
+        try {
+          const { data, error } = await supabase
+            .from('meals')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          if (error) throw error;
+          if (data) set({ meals: data.map((meal: any) => ({ ...meal, date: ensureString(meal.date) })) });
+        } catch (e) { console.error('fetchMeals error:', e); }
       },
       
       // Water methods
