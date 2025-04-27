@@ -41,8 +41,7 @@ import { supabase } from '@/lib/supabase';
 // Define message type for chat
 interface ChatMessage {
   id: string;
-  userId: string;
-  message: string;
+  text: string;
   isUser: boolean;
   timestamp: Date;
 }
@@ -51,30 +50,29 @@ interface ChatMessage {
 function mapChatMessage(row: any): ChatMessage {
   return {
     id: row.id,
-    userId: row.user_id,
-    message: row.message,
+    text: row.text,
     isUser: row.is_user,
     timestamp: row.timestamp ? new Date(row.timestamp) : new Date(),
   };
 }
 
-// Fetch chat history for user from Supabase
+// Fetch chat history for user
 async function fetchChatHistory(userId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase
-    .from('chat_history')
+    .from('chat_messages')
     .select('*')
     .eq('user_id', userId)
     .order('timestamp', { ascending: true });
-  if (error || !data) return [];
+  if (error) return [];
   return data.map(mapChatMessage);
 }
 
 // Save message to Supabase
-async function saveChatMessage(userId: string, message: string, isUser: boolean): Promise<ChatMessage | null> {
+async function saveChatMessage(userId: string, text: string, isUser: boolean): Promise<ChatMessage | null> {
   const { data, error } = await supabase
-    .from('chat_history')
-    .insert([{ user_id: userId, message, is_user: isUser }])
-    .select('*');
+    .from('chat_messages')
+    .insert([{ user_id: userId, text, is_user: isUser }])
+    .select();
   if (error || !data || !data[0]) return null;
   return mapChatMessage(data[0]);
 }
@@ -111,6 +109,7 @@ export default function CoachScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const [loading, setLoading] = useState(false);
   
   // Goal weight state
   const [goalWeightInput, setGoalWeightInput] = useState(user?.goalWeight ? String(user.goalWeight) : '');
@@ -122,7 +121,6 @@ export default function CoachScreen() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const [dailyLog, setDailyLog] = useState<DailyLog | undefined>(undefined);
 
-  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
@@ -153,9 +151,8 @@ export default function CoachScreen() {
 
   useEffect(() => {
     if (!user?.id) return;
-    // Fetch persistent chat history from Supabase
     fetchChatHistory(user.id).then(history => {
-      setMessages(history);
+      if (history.length > 0) setMessages(history);
     });
   }, [user?.id]);
 
@@ -192,7 +189,12 @@ export default function CoachScreen() {
     setModalVisible(true);
   };
 
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
   const handleSave = async () => {
+    setModalLoading(true);
+    setModalError(null);
     const currentDate = format(new Date(), 'yyyy-MM-dd');
     let loggedType: 'weight' | 'fruits' | 'protein' | 'steps' | null = null;
     let loggedValue = 0;
@@ -279,7 +281,14 @@ export default function CoachScreen() {
       }
       setModalVisible(false);
     } catch (e) {
-      console.error('CoachScreen log error:', e);
+      setModalError('Failed to save. Please try again.');
+      if (e instanceof Error) {
+        console.error('CoachScreen log error:', e.message, e.stack);
+      } else {
+        console.error('CoachScreen log error:', JSON.stringify(e));
+      }
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -405,40 +414,25 @@ export default function CoachScreen() {
   // Handle sending a message
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !user?.id) return;
+    setLoading(true);
+    // Save user message
+    const userMsg = await saveChatMessage(user.id, inputMessage, true);
+    if (userMsg) setMessages(prev => [...prev, userMsg]);
+    setInputMessage('');
     try {
-      console.log("[DEBUG] Saving user message...");
-      const userMsg = await saveChatMessage(user.id, inputMessage, true);
-      if (userMsg) setMessages(prev => [...prev, userMsg]);
-      setInputMessage('');
-      console.log("[DEBUG] Getting Supabase session for Authorization header...");
-      const sessionResult = await supabase.auth.getSession();
-      const accessToken = sessionResult?.data?.session?.access_token;
-      if (!accessToken) {
-        console.error("[DEBUG] No access token found. User may not be authenticated.");
-      }
-      console.log("[DEBUG] Sending message to Gemini Edge Function...");
+      // Call Gemini chat endpoint (existing logic)
       const response = await fetch('https://xkjixvyxiaphavaptmfl.functions.supabase.co/gemini-chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: user.id, message: inputMessage })
       });
-      console.log("[DEBUG] Gemini response status:", response.status);
-      let data;
-      try {
-        data = await response.json();
-        console.log("[DEBUG] Gemini response data:", data);
-      } catch (jsonErr) {
-        console.error("[DEBUG] Error parsing Gemini response JSON:", jsonErr);
-        data = {};
-      }
-      const aiMsg = data.reply ? await saveChatMessage(user.id, data.reply, false) : null;
+      const data = await response.json();
+      const aiMsg = await saveChatMessage(user.id, data.reply, false);
       if (aiMsg) setMessages(prev => [...prev, aiMsg]);
     } catch (e) {
-      console.error("[DEBUG] Error in handleSendMessage:", e);
+      // Optionally show error message
     }
+    setLoading(false);
   };
 
   // Render chat message item
@@ -453,7 +447,7 @@ export default function CoachScreen() {
         styles.messageText, 
         { color: item.isUser ? themeColors.card : themeColors.text }
       ]}>
-        {item.message}
+        {item.text}
       </Text>
       <Text style={[
         styles.messageTime, 
@@ -690,10 +684,14 @@ export default function CoachScreen() {
             {renderModalContent()}
             
             <Button
-              title="Save"
+              title={modalLoading ? 'Saving...' : 'Save'}
               onPress={handleSave}
               style={styles.saveButton}
+              disabled={modalLoading}
             />
+            {modalError && (
+              <Text style={{ color: Colors.error, textAlign: 'center', marginTop: 8 }}>{modalError}</Text>
+            )}
           </View>
         </View>
       </Modal>
@@ -847,6 +845,12 @@ export default function CoachScreen() {
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
           
+          {loading && (
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: themeColors.textTertiary }}>AI is typing...</Text>
+            </View>
+          )}
+          
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
@@ -866,7 +870,7 @@ export default function CoachScreen() {
             <TouchableOpacity 
               style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
               onPress={handleSendMessage}
-              disabled={inputMessage.trim() === ''}
+              disabled={inputMessage.trim() === '' || loading}
             >
               <Send size={20} color={themeColors.card} />
             </TouchableOpacity>

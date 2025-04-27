@@ -111,7 +111,7 @@ const GLP1_MEDICATIONS = [
   { id: 'zepbound_10.0', name: 'Zepbound', dosage: '10.0 mg' },
   { id: 'zepbound_12.5', name: 'Zepbound', dosage: '12.5 mg' },
   { id: 'zepbound_15.0', name: 'Zepbound', dosage: '15.0 mg' },
-  { id: 'other', name: 'Other (Custom)', dosage: '' },
+  { id: 'other', name: 'Other (Custom)', dosage: '' }
 ];
 
 // Common side effects of GLP-1 medications
@@ -285,7 +285,7 @@ export default function ShotsScreen() {
 
   // Shot handlers
   const openShotModal = () => {
-    setTime('08:00 AM'); // Set your preferred default value here (fixed to 12-hour format)
+    setTime('07:00 AM'); // Set your preferred default value here
     setLocation('');
     setNotes('');
     setSelectedMedication(GLP1_MEDICATIONS[0]);
@@ -761,7 +761,6 @@ export default function ShotsScreen() {
         visible={shotModalVisible}
         transparent={true}
         animationType="slide"
-        presentationStyle="overFullScreen" // Ensures Picker is visible on Android
         onRequestClose={() => setShotModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -841,7 +840,7 @@ export default function ShotsScreen() {
               
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Time</Text>
               <TimePickerWheel
-                value={time || '08:00 AM'} // Ensure default is 12-hour format
+                value={time || '08:00'}
                 onChange={(val) => {
                   console.log('TimePickerWheel selected:', val); // Debug log
                   setTime(val);

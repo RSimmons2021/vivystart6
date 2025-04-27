@@ -338,14 +338,19 @@ export const useHealthStore = create<HealthState>()(
           console.log('Inserting meal to Supabase:', newMeal);
           const { data, error } = await supabase
             .from('meals')
-            .insert([newMeal]);
-          if (error) throw error;
-          const dataArr = data as unknown[];
-          const maybeObj = dataArr[0];
+            .insert([newMeal])
+            .select(); // Ensures Supabase returns the inserted row
+
+          if (error) {
+            console.error('Supabase insert error:', error);
+            throw error;
+          }
+          if (!data || !Array.isArray(data) || data.length === 0) {
+            console.error('No data returned from Supabase insert:', data);
+            return;
+          }
+          const maybeObj = data[0];
           if (
-            data &&
-            Array.isArray(data) &&
-            dataArr.length > 0 &&
             typeof maybeObj === 'object' &&
             maybeObj !== null &&
             !Array.isArray(maybeObj)
