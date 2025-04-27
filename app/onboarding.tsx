@@ -21,7 +21,10 @@ export default function OnboardingScreen() {
   
   const handleComplete = async () => {
     console.log('Button pressed - starting handleComplete');
-    
+    if (!name.trim()) {
+      Alert.alert('Name required', 'Please enter your name to continue.');
+      return;
+    }
     try {
       // First check if we have an active session
       const { data: { session } } = await supabase.auth.getSession();
@@ -29,37 +32,27 @@ export default function OnboardingScreen() {
         Alert.alert('Session expired', 'Please log in again');
         return router.replace('/login');
       }
-      
       // Then get the user
-      console.log('Fetching user from Supabase...');
       const { data: { user }, error } = await supabase.auth.getUser();
-      
-      console.log('Supabase auth response:', { user, error });
-      
       if (error || !user) {
-        console.error('Error fetching user:', error);
         Alert.alert('Authentication required', 'Please log in again');
         return router.replace('/login');
       }
-      
-      console.log('Updating user profile with name:', name);
+      // Update user profile with name and onboarded
       const { error: updateError } = await supabase.from('users').update({
         name,
         onboarded: true
       }).eq('id', user.id);
-      
-      console.log('Profile update response:', { updateError });
-      
       if (updateError) {
-        console.error('Error updating profile:', updateError);
         Alert.alert('Failed to update profile', updateError.message);
         return;
       }
-      
-      console.log('Navigation to /(tabs)');
+      // Update zustand store
+      setUser({ ...user, name, onboarded: true });
+      setOnboarded(true);
       router.replace('/(tabs)');
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.error('Onboarding error:', err);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };
