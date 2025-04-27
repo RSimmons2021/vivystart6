@@ -21,7 +21,7 @@ export const useUserStore = create<UserState>()(
     (set, get) => ({
       user: null,
       isOnboarded: false,
-      weightUnit: 'lbs', // Default to lbs
+      weightUnit: 'lbs',
       setUser: async (user) => {
         try {
           const { data, error } = await supabase
