@@ -10,6 +10,7 @@ import {
 } from 'lucide-react-native';
 import { useThemeStore } from '@/store/theme-store';
 import Colors from '@/constants/colors';
+import CustomTabBar from './CustomTabBar';
 
 export default function TabLayout() {
   const { isDarkMode } = useThemeStore();
@@ -17,6 +18,7 @@ export default function TabLayout() {
   
   return (
     <Tabs
+      tabBar={props => <CustomTabBar {...props} />}
       screenOptions={{
         tabBarActiveTintColor: themeColors.primary,
         tabBarInactiveTintColor: themeColors.textTertiary,
