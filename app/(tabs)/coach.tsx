@@ -41,7 +41,8 @@ import { supabase } from '@/lib/supabase';
 // Define message type for chat
 interface ChatMessage {
   id: string;
-  text: string;
+  userId: string;
+  message: string;
   isUser: boolean;
   timestamp: Date;
 }
@@ -50,29 +51,30 @@ interface ChatMessage {
 function mapChatMessage(row: any): ChatMessage {
   return {
     id: row.id,
-    text: row.text,
+    userId: row.user_id,
+    message: row.message,
     isUser: row.is_user,
     timestamp: row.timestamp ? new Date(row.timestamp) : new Date(),
   };
 }
 
-// Fetch chat history for user
+// Fetch chat history for user from Supabase
 async function fetchChatHistory(userId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase
-    .from('chat_messages')
+    .from('chat_history')
     .select('*')
     .eq('user_id', userId)
     .order('timestamp', { ascending: true });
-  if (error) return [];
+  if (error || !data) return [];
   return data.map(mapChatMessage);
 }
 
 // Save message to Supabase
-async function saveChatMessage(userId: string, text: string, isUser: boolean): Promise<ChatMessage | null> {
+async function saveChatMessage(userId: string, message: string, isUser: boolean): Promise<ChatMessage | null> {
   const { data, error } = await supabase
-    .from('chat_messages')
-    .insert([{ user_id: userId, text, is_user: isUser }])
-    .select();
+    .from('chat_history')
+    .insert([{ user_id: userId, message, is_user: isUser }])
+    .select('*');
   if (error || !data || !data[0]) return null;
   return mapChatMessage(data[0]);
 }
@@ -151,8 +153,9 @@ export default function CoachScreen() {
 
   useEffect(() => {
     if (!user?.id) return;
+    // Fetch persistent chat history from Supabase
     fetchChatHistory(user.id).then(history => {
-      if (history.length > 0) setMessages(history);
+      setMessages(history);
     });
   }, [user?.id]);
 
@@ -415,22 +418,39 @@ export default function CoachScreen() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !user?.id) return;
     setLoading(true);
-    // Save user message
-    const userMsg = await saveChatMessage(user.id, inputMessage, true);
-    if (userMsg) setMessages(prev => [...prev, userMsg]);
-    setInputMessage('');
     try {
-      // Call Gemini chat endpoint (existing logic)
+      console.log("[DEBUG] Saving user message...");
+      const userMsg = await saveChatMessage(user.id, inputMessage, true);
+      if (userMsg) setMessages(prev => [...prev, userMsg]);
+      setInputMessage('');
+      console.log("[DEBUG] Getting Supabase session for Authorization header...");
+      const sessionResult = await supabase.auth.getSession();
+      const accessToken = sessionResult?.data?.session?.access_token;
+      if (!accessToken) {
+        console.error("[DEBUG] No access token found. User may not be authenticated.");
+      }
+      console.log("[DEBUG] Sending message to Gemini Edge Function...");
       const response = await fetch('https://xkjixvyxiaphavaptmfl.functions.supabase.co/gemini-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({ user_id: user.id, message: inputMessage })
       });
-      const data = await response.json();
-      const aiMsg = await saveChatMessage(user.id, data.reply, false);
+      console.log("[DEBUG] Gemini response status:", response.status);
+      let data;
+      try {
+        data = await response.json();
+        console.log("[DEBUG] Gemini response data:", data);
+      } catch (jsonErr) {
+        console.error("[DEBUG] Error parsing Gemini response JSON:", jsonErr);
+        data = {};
+      }
+      const aiMsg = data.reply ? await saveChatMessage(user.id, data.reply, false) : null;
       if (aiMsg) setMessages(prev => [...prev, aiMsg]);
     } catch (e) {
-      // Optionally show error message
+      console.error("[DEBUG] Error in handleSendMessage:", e);
     }
     setLoading(false);
   };
@@ -447,7 +467,7 @@ export default function CoachScreen() {
         styles.messageText, 
         { color: item.isUser ? themeColors.card : themeColors.text }
       ]}>
-        {item.text}
+        {item.message}
       </Text>
       <Text style={[
         styles.messageTime, 
