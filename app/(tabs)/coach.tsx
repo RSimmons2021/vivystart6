@@ -821,13 +821,13 @@ export default function CoachScreen() {
       {/* Chat Modal */}
       <Modal
         visible={chatModalVisible}
-        animationType="slide"
-        transparent={false}
+        animationType="fade"
+        transparent={true}
         onRequestClose={() => setChatModalVisible(false)}
       >
-        <SafeAreaView style={[styles.chatContainer, { backgroundColor: themeColors.background }]}>
-          <View style={[styles.chatHeader, { backgroundColor: themeColors.card }]}>
-            <View style={styles.chatHeaderContent}>
+        <View style={styles.elegantChatBackdrop}>
+          <SafeAreaView style={[styles.elegantChatContainer, { backgroundColor: themeColors.card, maxHeight: '90%' }]}> 
+            <View style={styles.chatHeaderRow}>
               <TouchableOpacity 
                 onPress={() => setChatModalVisible(false)}
                 style={styles.chatBackButton}
@@ -836,49 +836,47 @@ export default function CoachScreen() {
               </TouchableOpacity>
               <Text style={[styles.chatHeaderTitle, { color: themeColors.text }]}>AI Health Assistant</Text>
             </View>
-          </View>
-          
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderChatItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.chatList}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          />
-          
-          {loading && (
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: themeColors.textTertiary }}>AI is typing...</Text>
+            <View style={{ flex: 1, minHeight: 0 }}>
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                renderItem={renderChatItem}
+                keyExtractor={item => item.id}
+                contentContainerStyle={styles.elegantChatList}
+                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                showsVerticalScrollIndicator={true}
+                inverted={false}
+              />
+              {loading && (
+                <View style={styles.elegantTypingRow}>
+                  <Text style={{ color: themeColors.textTertiary, fontStyle: 'italic' }}>AI is typing…</Text>
+                </View>
+              )}
             </View>
-          )}
-          
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-            style={[styles.inputContainer, { backgroundColor: themeColors.card }]}
-          >
-            <TextInput
-              style={[styles.chatInput, { 
-                backgroundColor: themeColors.backgroundSecondary,
-                color: themeColors.text
-              }]}
-              value={inputMessage}
-              onChangeText={setInputMessage}
-              placeholder="Type your question here..."
-              placeholderTextColor={themeColors.textTertiary}
-              multiline
-            />
-            <TouchableOpacity 
-              style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
-              onPress={handleSendMessage}
-              disabled={inputMessage.trim() === '' || loading}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+              style={styles.elegantInputRow}
             >
-              <Send size={20} color={themeColors.card} />
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+              <TextInput
+                style={[styles.elegantChatInput, { backgroundColor: themeColors.backgroundSecondary, color: themeColors.text }]}
+                value={inputMessage}
+                onChangeText={setInputMessage}
+                placeholder="Type your question here…"
+                placeholderTextColor={themeColors.textTertiary}
+                multiline
+              />
+              <TouchableOpacity 
+                style={[styles.elegantSendButton, { backgroundColor: themeColors.primary }]}
+                onPress={handleSendMessage}
+                disabled={inputMessage.trim() === '' || loading}
+              >
+                <Send size={20} color={themeColors.card} />
+              </TouchableOpacity>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -1086,29 +1084,73 @@ const styles = StyleSheet.create({
   },
   
   // Chat styles
-  chatContainer: {
+  elegantChatBackdrop: {
     flex: 1,
-  },
-  chatHeader: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  chatHeaderContent: {
-    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  chatBackButton: {
-    marginRight: 16,
+  elegantChatContainer: {
+    width: '95%',
+    maxWidth: 480,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 8,
+    paddingBottom: 0,
+    maxHeight: '90%',
+    flexGrow: 1,
   },
-  chatHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  chatHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: 'transparent',
   },
-  chatList: {
-    padding: 16,
-    paddingBottom: 24,
+  elegantChatList: {
+    padding: 18,
+    paddingBottom: 0,
+  },
+  elegantTypingRow: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  elegantInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    backgroundColor: 'transparent',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  elegantChatInput: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 14,
+    fontSize: 16,
+    marginRight: 10,
+    minHeight: 44,
+    maxHeight: 120,
+  },
+  elegantSendButton: {
+    borderRadius: 20,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 4,
   },
   messageBubble: {
     maxWidth: '80%',
@@ -1133,26 +1175,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignSelf: 'flex-end',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  chatBackButton: {
+    marginRight: 16,
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
   },
-  chatInput: {
+  chatHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxHeight: 100,
-    marginRight: 8,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-end',
+    textAlign: 'center',
   },
 });
