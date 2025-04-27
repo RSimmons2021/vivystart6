@@ -111,7 +111,6 @@ export default function CoachScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
-  const [loading, setLoading] = useState(false);
   
   // Goal weight state
   const [goalWeightInput, setGoalWeightInput] = useState(user?.goalWeight ? String(user.goalWeight) : '');
@@ -123,6 +122,7 @@ export default function CoachScreen() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const [dailyLog, setDailyLog] = useState<DailyLog | undefined>(undefined);
 
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
@@ -192,12 +192,7 @@ export default function CoachScreen() {
     setModalVisible(true);
   };
 
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
-
   const handleSave = async () => {
-    setModalLoading(true);
-    setModalError(null);
     const currentDate = format(new Date(), 'yyyy-MM-dd');
     let loggedType: 'weight' | 'fruits' | 'protein' | 'steps' | null = null;
     let loggedValue = 0;
@@ -284,14 +279,7 @@ export default function CoachScreen() {
       }
       setModalVisible(false);
     } catch (e) {
-      setModalError('Failed to save. Please try again.');
-      if (e instanceof Error) {
-        console.error('CoachScreen log error:', e.message, e.stack);
-      } else {
-        console.error('CoachScreen log error:', JSON.stringify(e));
-      }
-    } finally {
-      setModalLoading(false);
+      console.error('CoachScreen log error:', e);
     }
   };
 
@@ -417,7 +405,6 @@ export default function CoachScreen() {
   // Handle sending a message
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !user?.id) return;
-    setLoading(true);
     try {
       console.log("[DEBUG] Saving user message...");
       const userMsg = await saveChatMessage(user.id, inputMessage, true);
@@ -452,7 +439,6 @@ export default function CoachScreen() {
     } catch (e) {
       console.error("[DEBUG] Error in handleSendMessage:", e);
     }
-    setLoading(false);
   };
 
   // Render chat message item
@@ -704,14 +690,10 @@ export default function CoachScreen() {
             {renderModalContent()}
             
             <Button
-              title={modalLoading ? 'Saving...' : 'Save'}
+              title="Save"
               onPress={handleSave}
               style={styles.saveButton}
-              disabled={modalLoading}
             />
-            {modalError && (
-              <Text style={{ color: Colors.error, textAlign: 'center', marginTop: 8 }}>{modalError}</Text>
-            )}
           </View>
         </View>
       </Modal>
@@ -865,12 +847,6 @@ export default function CoachScreen() {
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
           
-          {loading && (
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: themeColors.textTertiary }}>AI is typing...</Text>
-            </View>
-          )}
-          
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
@@ -890,7 +866,7 @@ export default function CoachScreen() {
             <TouchableOpacity 
               style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
               onPress={handleSendMessage}
-              disabled={inputMessage.trim() === '' || loading}
+              disabled={inputMessage.trim() === ''}
             >
               <Send size={20} color={themeColors.card} />
             </TouchableOpacity>
