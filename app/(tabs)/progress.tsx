@@ -195,129 +195,137 @@ export default function ProgressScreen() {
       
       <ScrollView style={styles.scrollView}>
         <Card style={[styles.scoreCard, { backgroundColor: themeColors.card }]}>
-          <MultiRingProgress
-            size={200}
-            rings={[
-              { progress: weeklyScore.fruitsVeggies, color: Colors.fruits, strokeWidth: 12 },
-              { progress: weeklyScore.protein, color: Colors.protein, strokeWidth: 12 },
-              { progress: weeklyScore.steps, color: Colors.steps, strokeWidth: 12 },
-            ]}
-            isDarkMode={isDarkMode}
-          >
-            <Text style={[styles.scorePercentage, { color: themeColors.text }]}>{weeklyScore.overall}%</Text>
-            <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>Weekly Score</Text>
-          </MultiRingProgress>
-          
-          <View style={styles.scoreBreakdown}>
-            <View style={styles.scoreItem}>
-              <View style={[styles.scoreIndicator, { backgroundColor: Colors.fruits }]} />
-              <Text style={[styles.scoreItemLabel, { color: themeColors.text }]}>Fruits & Veggies</Text>
-              <Text style={[styles.scoreItemValue, { color: themeColors.text }]}>{weeklyScore.fruitsVeggies}%</Text>
-            </View>
+          <View>
+            <MultiRingProgress
+              size={200}
+              rings={[
+                { progress: weeklyScore.fruitsVeggies, color: Colors.fruits, strokeWidth: 12 },
+                { progress: weeklyScore.protein, color: Colors.protein, strokeWidth: 12 },
+                { progress: weeklyScore.steps, color: Colors.steps, strokeWidth: 12 },
+              ]}
+              isDarkMode={isDarkMode}
+            >
+              <Text style={[styles.scorePercentage, { color: themeColors.text }]}>{weeklyScore.overall}%</Text>
+              <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>Weekly Score</Text>
+            </MultiRingProgress>
             
-            <View style={styles.scoreItem}>
-              <View style={[styles.scoreIndicator, { backgroundColor: Colors.protein }]} />
-              <Text style={[styles.scoreItemLabel, { color: themeColors.text }]}>Protein</Text>
-              <Text style={[styles.scoreItemValue, { color: themeColors.text }]}>{weeklyScore.protein}%</Text>
-            </View>
-            
-            <View style={styles.scoreItem}>
-              <View style={[styles.scoreIndicator, { backgroundColor: Colors.steps }]} />
-              <Text style={[styles.scoreItemLabel, { color: themeColors.text }]}>Steps</Text>
-              <Text style={[styles.scoreItemValue, { color: themeColors.text }]}>{weeklyScore.steps}%</Text>
+            <View style={styles.scoreBreakdown}>
+              <View style={styles.scoreItem}>
+                <View style={[styles.scoreIndicator, { backgroundColor: Colors.fruits }]} />
+                <Text style={[styles.scoreItemLabel, { color: themeColors.text }]}>Fruits & Veggies</Text>
+                <Text style={[styles.scoreItemValue, { color: themeColors.text }]}>{weeklyScore.fruitsVeggies}%</Text>
+              </View>
+              
+              <View style={styles.scoreItem}>
+                <View style={[styles.scoreIndicator, { backgroundColor: Colors.protein }]} />
+                <Text style={[styles.scoreItemLabel, { color: themeColors.text }]}>Protein</Text>
+                <Text style={[styles.scoreItemValue, { color: themeColors.text }]}>{weeklyScore.protein}%</Text>
+              </View>
+              
+              <View style={styles.scoreItem}>
+                <View style={[styles.scoreIndicator, { backgroundColor: Colors.steps }]} />
+                <Text style={[styles.scoreItemLabel, { color: themeColors.text }]}>Steps</Text>
+                <Text style={[styles.scoreItemValue, { color: themeColors.text }]}>{weeklyScore.steps}%</Text>
+              </View>
             </View>
           </View>
         </Card>
         
         <View style={styles.weightCards}>
           <Card style={[styles.weightCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.weightCardTitle, { color: themeColors.textSecondary }]}>Weight Loss</Text>
-            <Text style={[styles.weightCardValue, { color: themeColors.text }]}>
-              {convertedWeightLoss.total} {weightUnit}
-            </Text>
+            <View>
+              <Text style={[styles.weightCardTitle, { color: themeColors.textSecondary }]}>Weight Loss</Text>
+              <Text style={[styles.weightCardValue, { color: themeColors.text }]}>
+                {convertedWeightLoss.total} {weightUnit}
+              </Text>
+            </View>
           </Card>
           
           <Card style={[styles.weightCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.weightCardTitle, { color: themeColors.textSecondary }]}>% Lost</Text>
-            <Text style={[styles.weightCardValue, { color: themeColors.text }]}>{convertedWeightLoss.percentage}%</Text>
+            <View>
+              <Text style={[styles.weightCardTitle, { color: themeColors.textSecondary }]}>% Lost</Text>
+              <Text style={[styles.weightCardValue, { color: themeColors.text }]}>{convertedWeightLoss.percentage}%</Text>
+            </View>
           </Card>
         </View>
         
         <Card style={[styles.chartCard, { backgroundColor: themeColors.card }]}>
-          <View style={styles.chartHeader}>
-            <Text style={[styles.chartTitle, { color: themeColors.text }]}>Weight Trend</Text>
-            <TouchableOpacity onPress={() => setModalVisible(true)}>
-              <ArrowUpRight size={20} color={themeColors.primary} />
-            </TouchableOpacity>
-          </View>
-          
-          {/* Add a wrapper with explicit background color for Android light mode */}
-          <View style={Platform.OS === 'android' ? 
-            { backgroundColor: isDarkMode ? '#242424' : '#ffffff', borderRadius: 16 } : {}}>
-            <WeightChart
-              weightLogs={weightLogs}
-              startWeight={user?.startWeight || 0}
-              goalWeight={user?.goalWeight || 0}
-              period={chartPeriod}
-              isDarkMode={isDarkMode}
-              weightUnit={weightUnit}
-            />
-          </View>
-          
-          <View style={styles.periodSelector}>
-            <TouchableOpacity
-              style={[
-                styles.periodButton,
-                chartPeriod === 'week' && [styles.periodButtonActive, { backgroundColor: themeColors.primary }]
-              ]}
-              onPress={() => setChartPeriod('week')}
-            >
-              <Text 
-                style={[
-                  styles.periodButtonText,
-                  { color: themeColors.textSecondary },
-                  chartPeriod === 'week' && [styles.periodButtonTextActive, { color: themeColors.card }]
-                ]}
-              >
-                Week
-              </Text>
-            </TouchableOpacity>
+          <View>
+            <View style={styles.chartHeader}>
+              <Text style={[styles.chartTitle, { color: themeColors.text }]}>Weight Trend</Text>
+              <TouchableOpacity onPress={() => setModalVisible(true)}>
+                <ArrowUpRight size={20} color={themeColors.primary} />
+              </TouchableOpacity>
+            </View>
             
-            <TouchableOpacity
-              style={[
-                styles.periodButton,
-                chartPeriod === 'month' && [styles.periodButtonActive, { backgroundColor: themeColors.primary }]
-              ]}
-              onPress={() => setChartPeriod('month')}
-            >
-              <Text 
-                style={[
-                  styles.periodButtonText,
-                  { color: themeColors.textSecondary },
-                  chartPeriod === 'month' && [styles.periodButtonTextActive, { color: themeColors.card }]
-                ]}
-              >
-                Month
-              </Text>
-            </TouchableOpacity>
+            {/* Add a wrapper with explicit background color for Android light mode */}
+            <View style={Platform.OS === 'android' ? 
+              { backgroundColor: isDarkMode ? '#242424' : '#ffffff', borderRadius: 16 } : {}}>
+              <WeightChart
+                weightLogs={weightLogs}
+                startWeight={user?.startWeight || 0}
+                goalWeight={user?.goalWeight || 0}
+                period={chartPeriod}
+                isDarkMode={isDarkMode}
+                weightUnit={weightUnit}
+              />
+            </View>
             
-            <TouchableOpacity
-              style={[
-                styles.periodButton,
-                chartPeriod === 'year' && [styles.periodButtonActive, { backgroundColor: themeColors.primary }]
-              ]}
-              onPress={() => setChartPeriod('year')}
-            >
-              <Text 
+            <View style={styles.periodSelector}>
+              <TouchableOpacity
                 style={[
-                  styles.periodButtonText,
-                  { color: themeColors.textSecondary },
-                  chartPeriod === 'year' && [styles.periodButtonTextActive, { color: themeColors.card }]
+                  styles.periodButton,
+                  chartPeriod === 'week' && [styles.periodButtonActive, { backgroundColor: themeColors.primary }]
                 ]}
+                onPress={() => setChartPeriod('week')}
               >
-                Year
-              </Text>
-            </TouchableOpacity>
+                <Text 
+                  style={[
+                    styles.periodButtonText,
+                    { color: themeColors.textSecondary },
+                    chartPeriod === 'week' && [styles.periodButtonTextActive, { color: themeColors.card }]
+                  ]}
+                >
+                  Week
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.periodButton,
+                  chartPeriod === 'month' && [styles.periodButtonActive, { backgroundColor: themeColors.primary }]
+                ]}
+                onPress={() => setChartPeriod('month')}
+              >
+                <Text 
+                  style={[
+                    styles.periodButtonText,
+                    { color: themeColors.textSecondary },
+                    chartPeriod === 'month' && [styles.periodButtonTextActive, { color: themeColors.card }]
+                  ]}
+                >
+                  Month
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.periodButton,
+                  chartPeriod === 'year' && [styles.periodButtonActive, { backgroundColor: themeColors.primary }]
+                ]}
+                onPress={() => setChartPeriod('year')}
+              >
+                <Text 
+                  style={[
+                    styles.periodButtonText,
+                    { color: themeColors.textSecondary },
+                    chartPeriod === 'year' && [styles.periodButtonTextActive, { color: themeColors.card }]
+                  ]}
+                >
+                  Year
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Card>
         
@@ -341,73 +349,69 @@ export default function ProgressScreen() {
           </Card>
         ) : (
           recentMeals.map((meal, index) => (
-            <Card key={index} style={[styles.mealCard, { backgroundColor: themeColors.card }]}>
-              <View style={styles.mealHeader}>
-                <View>
-                  <Text style={[styles.mealName, { color: themeColors.text }]}>{meal.name}</Text>
-                  <Text style={[styles.mealDate, { color: themeColors.textSecondary }]}>
-                    {format(parseISO(meal.date), 'MMM d')} • {meal.time}
-                  </Text>
+            <Card key={index} style={[styles.mealCard, { backgroundColor: themeColors.card }]}> 
+              <View>
+                <View style={styles.mealHeader}>
+                  <View>
+                    <Text style={[styles.mealName, { color: themeColors.text }]}>{meal.name}</Text>
+                    <Text style={[styles.mealDate, { color: themeColors.textSecondary }]}> 
+                      {format(parseISO(meal.date), 'MMM d')} • {meal.time}
+                    </Text>
+                  </View>
+                  {meal.calories && (
+                    <Text style={[styles.mealCalories, { color: themeColors.primary }]}>{meal.calories} cal</Text>
+                  )}
                 </View>
-                {meal.calories && (
-                  <Text style={[styles.mealCalories, { color: themeColors.primary }]}>{meal.calories} cal</Text>
+                {meal.imageUri && (
+                  <Image
+                    source={{ uri: meal.imageUri }}
+                    style={styles.mealImage}
+                    resizeMode="cover"
+                  />
                 )}
+                {meal.description && (
+                  <Text style={[styles.mealDescription, { color: themeColors.textSecondary }]}>{meal.description}</Text>
+                )}
+                {(meal.fruitsVeggies || meal.protein || meal.carbs || meal.fat) && (
+                  <View style={styles.mealNutrition}>
+                    {meal.fruitsVeggies && (
+                      <View style={styles.nutritionItem}>
+                        <View style={[styles.nutritionIndicator, { backgroundColor: Colors.fruits }]} />
+                        <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}> 
+                          {meal.fruitsVeggies} servings
+                        </Text>
+                      </View>
+                    )}
+                    {meal.protein && (
+                      <View style={styles.nutritionItem}>
+                        <View style={[styles.nutritionIndicator, { backgroundColor: Colors.protein }]} />
+                        <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}> 
+                          {meal.protein}g protein
+                        </Text>
+                      </View>
+                    )}
+                    {meal.carbs && (
+                      <View style={styles.nutritionItem}>
+                        <View style={[styles.nutritionIndicator, { backgroundColor: Colors.primary }]} />
+                        <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}> 
+                          {meal.carbs}g carbs
+                        </Text>
+                      </View>
+                    )}
+                    {meal.fat && (
+                      <View style={styles.nutritionItem}>
+                        <View style={[styles.nutritionIndicator, { backgroundColor: Colors.warning }]} />
+                        <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}> 
+                          {meal.fat}g fat
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+                <TouchableOpacity style={styles.deleteButton} onPress={async () => { await deleteMeal(meal.id); await fetchMeals(); }}>
+                  <Trash2 size={22} color={Colors.error} />
+                </TouchableOpacity>
               </View>
-              
-              {meal.imageUri && (
-                <Image
-                  source={{ uri: meal.imageUri }}
-                  style={styles.mealImage}
-                  resizeMode="cover"
-                />
-              )}
-              
-              {meal.description && (
-                <Text style={[styles.mealDescription, { color: themeColors.textSecondary }]}>{meal.description}</Text>
-              )}
-              
-              {(meal.fruitsVeggies || meal.protein || meal.carbs || meal.fat) && (
-                <View style={styles.mealNutrition}>
-                  {meal.fruitsVeggies && (
-                    <View style={styles.nutritionItem}>
-                      <View style={[styles.nutritionIndicator, { backgroundColor: Colors.fruits }]} />
-                      <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}>
-                        {meal.fruitsVeggies} servings
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {meal.protein && (
-                    <View style={styles.nutritionItem}>
-                      <View style={[styles.nutritionIndicator, { backgroundColor: Colors.protein }]} />
-                      <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}>
-                        {meal.protein}g protein
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {meal.carbs && (
-                    <View style={styles.nutritionItem}>
-                      <View style={[styles.nutritionIndicator, { backgroundColor: Colors.primary }]} />
-                      <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}>
-                        {meal.carbs}g carbs
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {meal.fat && (
-                    <View style={styles.nutritionItem}>
-                      <View style={[styles.nutritionIndicator, { backgroundColor: Colors.warning }]} />
-                      <Text style={[styles.nutritionText, { color: themeColors.textSecondary }]}>
-                        {meal.fat}g fat
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-              <TouchableOpacity style={styles.deleteButton} onPress={async () => { await deleteMeal(meal.id); await fetchMeals(); }}>
-                <Trash2 size={22} color={Colors.error} />
-              </TouchableOpacity>
             </Card>
           ))
         )}
@@ -519,26 +523,26 @@ export default function ProgressScreen() {
                 <X size={24} color={themeColors.text} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 500 }}>
+            <ScrollView style={{ maxHeight: 500, backgroundColor: themeColors.background }} contentContainerStyle={{ paddingBottom: 20 }}>
               <TouchableOpacity style={styles.imagePicker} onPress={handlePickImage}>
                 {addMealForm.imageUri ? (
                   <Image source={{ uri: addMealForm.imageUri }} style={styles.addMealImage} />
                 ) : (
-                  <View style={styles.addMealImagePlaceholder}>
+                  <View style={[styles.addMealImagePlaceholder, { backgroundColor: themeColors.backgroundSecondary }]}> {/* Theme background */}
                     <Camera size={32} color={themeColors.textTertiary} />
                     <Text style={{ color: themeColors.textTertiary, marginTop: 8 }}>Add Photo (Optional)</Text>
                   </View>
                 )}
               </TouchableOpacity>
               <TextInput
-                style={[styles.input, { color: themeColors.text }]}
+                style={[styles.input, { color: themeColors.text, backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
                 placeholder="Meal Title"
                 placeholderTextColor={themeColors.textTertiary}
                 value={addMealForm.name}
                 onChangeText={text => setAddMealForm(f => ({ ...f, name: text }))}
               />
               <TextInput
-                style={[styles.input, { color: themeColors.text, minHeight: 60 }]}
+                style={[styles.input, { color: themeColors.text, backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border, minHeight: 60 }]}
                 placeholder="Description"
                 placeholderTextColor={themeColors.textTertiary}
                 value={addMealForm.description}
@@ -546,7 +550,7 @@ export default function ProgressScreen() {
                 multiline
               />
               <TextInput
-                style={[styles.input, { color: themeColors.text }]}
+                style={[styles.input, { color: themeColors.text, backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
                 placeholder="Fruits & Veggies (servings)"
                 placeholderTextColor={themeColors.textTertiary}
                 value={addMealForm.fruitsVeggies}
@@ -554,7 +558,7 @@ export default function ProgressScreen() {
                 keyboardType="numeric"
               />
               <TextInput
-                style={[styles.input, { color: themeColors.text }]}
+                style={[styles.input, { color: themeColors.text, backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
                 placeholder="Protein (grams)"
                 placeholderTextColor={themeColors.textTertiary}
                 value={addMealForm.protein}
@@ -562,7 +566,7 @@ export default function ProgressScreen() {
                 keyboardType="numeric"
               />
               <TextInput
-                style={[styles.input, { color: themeColors.text }]}
+                style={[styles.input, { color: themeColors.text, backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
                 placeholder="Carbs (grams)"
                 placeholderTextColor={themeColors.textTertiary}
                 value={addMealForm.carbs}
@@ -570,7 +574,7 @@ export default function ProgressScreen() {
                 keyboardType="numeric"
               />
               <TextInput
-                style={[styles.input, { color: themeColors.text }]}
+                style={[styles.input, { color: themeColors.text, backgroundColor: themeColors.backgroundSecondary, borderColor: themeColors.border }]}
                 placeholder="Fat (grams)"
                 placeholderTextColor={themeColors.textTertiary}
                 value={addMealForm.fat}
@@ -585,11 +589,11 @@ export default function ProgressScreen() {
                   <Trash2 size={22} color={Colors.error} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.saveButton, { marginLeft: 16, opacity: addMealLoading ? 0.5 : 1 }]}
+                  style={[styles.saveButton, { marginLeft: 16, opacity: addMealLoading ? 0.5 : 1, backgroundColor: themeColors.primary }]}
                   onPress={handleAddMealSubmit}
                   disabled={addMealLoading}
                 >
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={[styles.saveButtonText, { color: themeColors.card }]}>Save</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
