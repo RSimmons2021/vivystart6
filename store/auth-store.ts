@@ -32,6 +32,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     set({ loading: true, error: null });
     const { error } = await supabase.auth.signOut();
+    // Also clear the user store to ensure unified logout
+    try {
+      const { clearUser } = require('./user-store');
+      if (typeof clearUser === 'function') {
+        clearUser();
+      } else if (clearUser && clearUser.default) {
+        clearUser.default();
+      }
+    } catch (e) {
+      // Fallback: direct import may fail in some bundlers, so ignore
+    }
     set({ loading: false, user: null, error: error ? error.message : null });
   },
   checkSession: async () => {
