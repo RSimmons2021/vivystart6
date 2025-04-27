@@ -38,17 +38,39 @@ export default function OnboardingScreen() {
         Alert.alert('Authentication required', 'Please log in again');
         return router.replace('/login');
       }
-      // Update user profile with name and onboarded
-      const { error: updateError } = await supabase.from('users').update({
-        name,
-        onboarded: true
-      }).eq('id', user.id);
-      if (updateError) {
-        Alert.alert('Failed to update profile', updateError.message);
+      // Check if user row exists
+      let { data: userRow, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (fetchError && (fetchError.code === 'PGRST116' || fetchError.message.includes('0 rows'))) {
+        // Create user row with required fields
+        const { error: insertError } = await supabase.from('users').insert({
+          id: user.id,
+          email: user.email,
+          name: name.trim(),
+          onboarded: true
+        });
+        if (insertError) {
+          Alert.alert('Failed to create user profile', insertError.message);
+          return;
+        }
+      } else if (fetchError) {
+        Alert.alert('Failed to fetch user profile', fetchError.message);
         return;
+      } else {
+        // Update name if row exists
+        const { error: updateError } = await supabase.from('users').update({
+          name: name.trim(),
+          onboarded: true
+        }).eq('id', user.id);
+        if (updateError) {
+          Alert.alert('Failed to update profile', updateError.message);
+          return;
+        }
       }
-      // Update zustand store
-      setUser({ ...user, name, onboarded: true });
+      setUser({ ...user, name: name.trim(), onboarded: true });
       setOnboarded(true);
       router.replace('/(tabs)');
     } catch (err) {

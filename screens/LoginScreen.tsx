@@ -33,16 +33,9 @@ export default function LoginScreen() {
         .eq('id', user.id)
         .single();
       console.log('[LoginScreen] Fetched user row:', data, 'Error:', error);
-      // If row doesn't exist, create it and treat as new user
+      // --- Edit: Remove insert logic for new user, just route to onboarding if user row missing ---
+      // If row doesn't exist, immediately go to onboarding (creation will be handled there)
       if (error && (error.code === 'PGRST116' || error.message.includes('0 rows'))) {
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({ id: user.id, email: user.email, onboarded: false });
-        console.log('[LoginScreen] Inserted new user row. Error:', insertError);
-        if (insertError) {
-          alert('Could not create user profile');
-          return;
-        }
         router.replace('/onboarding');
         return;
       }
