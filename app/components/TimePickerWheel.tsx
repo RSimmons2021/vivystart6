@@ -1,98 +1,132 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { Platform, View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface TimePickerWheelProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-const hours12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
-const minutes = Array.from({ length: 60 }, (_, i) => i);
-const meridiems = ['AM', 'PM'];
+function parseTimeString(time: string): Date {
+  // Expects 'hh:mm AM/PM'
+  const match = time.match(/^(\d{1,2}):(\d{2}) ?(AM|PM)$/i);
+  let date = new Date();
+  if (match) {
+    let hour = parseInt(match[1], 10);
+    let minute = parseInt(match[2], 10);
+    const meridiem = match[3].toUpperCase();
+    if (meridiem === 'PM' && hour !== 12) hour += 12;
+    if (meridiem === 'AM' && hour === 12) hour = 0;
+    date.setHours(hour, minute, 0, 0);
+  } else {
+    date.setHours(8, 0, 0, 0); // fallback to 8:00 AM
+  }
+  return date;
+}
+
+function formatTimeTo12Hour(date: Date): string {
+  let hour = date.getHours();
+  let minute = date.getMinutes();
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+}
 
 const TimePickerWheel: React.FC<TimePickerWheelProps> = ({ value, onChange }) => {
-  // Parse value ("HH:MM AM/PM")
-  let hour = 8, minute = 0, meridiem = 'AM';
-  if (value) {
-    const match = value.match(/^(\d{1,2}):(\d{2}) ?(AM|PM)?$/i);
-    if (match) {
-      hour = parseInt(match[1], 10);
-      minute = parseInt(match[2], 10);
-      if (match[3]) meridiem = match[3].toUpperCase();
-      // Convert 24h to 12h
-      if (!match[3] && hour >= 12) {
-        meridiem = hour >= 12 && hour < 24 ? 'PM' : 'AM';
-        hour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      }
-    }
-  }
+  const [show, setShow] = React.useState(false);
+  const [internalDate, setInternalDate] = React.useState(parseTimeString(value));
 
-  // Fix: Always fire onChange for initial value (8:00 AM) on mount
   React.useEffect(() => {
-    if (!value) {
-      onChange('08:00 AM');
-    }
-  }, []); // Only run once on mount
+    setInternalDate(parseTimeString(value));
+  }, [value]);
 
-  const handleChange = (h: number, m: number, mer: string) => {
-    // Convert to string and pass up
-    onChange(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${mer}`);
+  const handleChange = (event: any, selectedDate?: Date) => {
+    setShow(Platform.OS === 'ios'); // iOS stays open, Android closes
+    if (selectedDate) {
+      setInternalDate(selectedDate);
+      onChange(formatTimeTo12Hour(selectedDate));
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Picker
-        selectedValue={hour}
-        style={styles.picker}
-        onValueChange={h => handleChange(h, minute, meridiem)}
-      >
-        {hours12.map(h => (
-          <Picker.Item key={h} label={h.toString()} value={h} />
-        ))}
-      </Picker>
-      <Text style={styles.colon}>:</Text>
-      <Picker
-        selectedValue={minute}
-        style={styles.picker}
-        onValueChange={m => handleChange(hour, m, meridiem)}
-      >
-        {minutes.map(m => (
-          <Picker.Item key={m} label={m.toString().padStart(2, '0')} value={m} />
-        ))}
-      </Picker>
-      <Picker
-        selectedValue={meridiem}
-        style={styles.pickerMeridiem}
-        onValueChange={mer => handleChange(hour, minute, mer)}
-      >
-        {meridiems.map(mer => (
-          <Picker.Item key={mer} label={mer} value={mer} />
-        ))}
-      </Picker>
+      {Platform.OS === 'ios' ? (
+        <Modal visible={show} transparent animationType="slide" onRequestClose={() => setShow(false)}>
+          <View style={styles.iosModalOverlay}>
+            <View style={styles.iosModalContent}>
+              <DateTimePicker
+                value={internalDate}
+                mode="time"
+                display="spinner"
+                onChange={handleChange}
+                textColor="#000"
+                style={{ backgroundColor: '#fff' }}
+              />
+              <TouchableOpacity style={styles.doneButton} onPress={() => setShow(false)}>
+                <Text style={styles.doneButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+      <TouchableOpacity style={styles.timeButton} onPress={() => setShow(true)}>
+        <Text style={styles.timeButtonText}>{value || '08:00 AM'}</Text>
+      </TouchableOpacity>
+      {show && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={internalDate}
+          mode="time"
+          display="spinner"
+          onChange={handleChange}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start',
     marginVertical: 10,
   },
-  picker: {
-    width: 80,
-    height: 180,
+  timeButton: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+    minWidth: 120,
+    alignItems: 'center',
   },
-  pickerMeridiem: {
-    width: 80,
-    height: 180,
+  timeButtonText: {
+    fontSize: 20,
+    color: '#333',
+    fontWeight: '500',
   },
-  colon: {
-    fontSize: 32,
+  iosModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-end',
+  },
+  iosModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  doneButton: {
+    marginTop: 16,
+    backgroundColor: '#9c5dc0',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  doneButtonText: {
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
-    marginHorizontal: 6,
   },
 });
 
