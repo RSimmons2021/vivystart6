@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TextInput,
   TouchableOpacity,
-  Alert
+  Alert,
+  Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,7 +19,16 @@ export default function OnboardingScreen() {
   const { setUser, setOnboarded } = useUserStore();
   
   const [name, setName] = useState('');
-  
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 700,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   const handleComplete = async () => {
     console.log('Button pressed - starting handleComplete');
     if (!name.trim()) {
@@ -81,7 +91,7 @@ export default function OnboardingScreen() {
   
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      <Animated.View style={[styles.card, { opacity: fadeAnim }]}>  
         <Text style={styles.title}>Welcome to GLP-1 Tracker</Text>
         <Text style={styles.description}>
           Let's get started by setting up your profile. What's your name?
@@ -93,17 +103,13 @@ export default function OnboardingScreen() {
           placeholder="Enter your name"
           placeholderTextColor={Colors.textTertiary}
         />
-        
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => {
-            console.log('Button pressed directly');
-            handleComplete();
-          }}
+          onPress={handleComplete}
         >
-          <Text style={styles.buttonText}>Get Started</Text>
+          <Text style={styles.buttonText}>Continue</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -112,45 +118,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+  },
+  card: {
+    width: '90%',
+    padding: 32,
+    borderRadius: 28,
+    backgroundColor: Colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 16,
+    color: Colors.primary,
+    marginBottom: 12,
     textAlign: 'center',
   },
   description: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.textSecondary,
-    marginBottom: 32,
+    marginBottom: 28,
     textAlign: 'center',
   },
   input: {
     width: '100%',
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.input,
     color: Colors.text,
+    fontSize: 18,
     marginBottom: 24,
   },
   button: {
+    width: '100%',
     backgroundColor: Colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 12,
   },
   buttonText: {
-    color: 'white',
+    color: Colors.buttonText || '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
   },
 });

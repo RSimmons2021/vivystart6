@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useAuth } from '@/context/AuthProvider';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import Colors from '@/constants/colors';
 
 export default function LoginScreen() {
   const { login, register, error, loading } = useAuth();
@@ -10,6 +11,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const router = useRouter();
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 700,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -54,45 +64,115 @@ export default function LoginScreen() {
     } else {
       console.log('[LoginScreen] Register mode for:', email);
       await register(email, password);
-      // After registration, always go to onboarding
-      router.replace('/onboarding');
+      // Do NOT navigate; let the layout handle onboarding
     }
   };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: Colors.background }}
     >
-      <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          style={{ borderWidth: 1, borderRadius: 5, marginBottom: 10, padding: 10 }}
-        />
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={{ borderWidth: 1, borderRadius: 5, marginBottom: 10, padding: 10 }}
-        />
-        {error && <Text style={{ color: 'red', marginBottom: 10 }}>{error}</Text>}
-        <TouchableOpacity
-          onPress={handleAuth}
-          style={{ backgroundColor: '#007bff', padding: 15, borderRadius: 5, alignItems: 'center', marginBottom: 10 }}
-          disabled={loading}
-        >
-          <Text style={{ color: 'white', fontWeight: 'bold' }}>{loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Register'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'register' : 'login')}>
-          <Text style={{ color: '#007bff', textAlign: 'center' }}>
-            {mode === 'login' ? 'Need an account? Register' : 'Already have an account? Login'}
-          </Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Animated.View style={[styles.card, { opacity: fadeAnim }]}>  
+          <Text style={styles.title}>{mode === 'login' ? 'Welcome Back!' : 'Create Account'}</Text>
+          <Text style={styles.subtitle}>{mode === 'login' ? 'Sign in to continue your journey.' : 'Register to get started.'}</Text>
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            style={styles.input}
+            placeholderTextColor={Colors.textTertiary}
+          />
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+            placeholderTextColor={Colors.textTertiary}
+          />
+          {error && <Text style={styles.error}>{error}</Text>}
+          <TouchableOpacity
+            onPress={handleAuth}
+            style={styles.button}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Register'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'register' : 'login')}>
+            <Text style={styles.switchText}>
+              {mode === 'login' ? 'Need an account? Register' : 'Already have an account? Login'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = {
+  card: {
+    width: '90%',
+    padding: 32,
+    borderRadius: 28,
+    backgroundColor: Colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  input: {
+    width: '100%',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.input,
+    color: Colors.text,
+    fontSize: 17,
+    marginBottom: 18,
+  },
+  button: {
+    width: '100%',
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  buttonText: {
+    color: Colors.buttonText || '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  switchText: {
+    color: Colors.primary,
+    fontSize: 15,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  error: {
+    color: Colors.error || '#e74c3c',
+    marginBottom: 10,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+};
