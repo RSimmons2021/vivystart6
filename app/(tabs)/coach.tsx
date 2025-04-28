@@ -156,6 +156,15 @@ export default function CoachScreen() {
     });
   }, [user?.id]);
 
+  // Scroll chat to bottom when modal opens
+  useEffect(() => {
+    if (chatModalVisible && flatListRef.current && messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [chatModalVisible, messages.length]);
+
   // Calendar related functions
   const monthStart = startOfMonth(calendarDate);
   const monthEnd = endOfMonth(calendarDate);
