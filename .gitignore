@@ -37,3 +37,4 @@ yarn-error.*
 .vercel
 .env
 .env
+.env
