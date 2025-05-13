@@ -22,6 +22,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  console.log('[RootLayout] Rendering root layout');
   return (
     <AuthProvider>
       <RootLayoutContent />
@@ -30,11 +31,14 @@ export default function RootLayout() {
 }
 
 function RootLayoutContent() {
+  console.log('[RootLayoutContent] Starting to render content');
   const { isOnboarded } = useUserStore();
   const { isDarkMode } = useThemeStore();
   const { updateLoginStreak } = useGamificationStore();
   const colorScheme = useColorScheme();
   const { user } = useAuth();
+  
+  console.log('[RootLayoutContent] Auth state:', { user, isOnboarded });
   
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
@@ -43,17 +47,20 @@ function RootLayoutContent() {
     ...FontAwesome.font,
   });
 
+  console.log('[RootLayoutContent] Font loading state:', { loaded, error });
+
   useEffect(() => {
     if (error) {
-      console.error(error);
+      console.error('[RootLayoutContent] Font loading error:', error);
       throw error;
     }
   }, [error]);
 
   useEffect(() => {
     if (loaded) {
+      console.log('[RootLayoutContent] Fonts loaded, hiding splash screen');
       // Only hide the splash screen after the fonts have loaded and the UI is ready
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(console.error);
       
       // Update login streak when app loads
       updateLoginStreak();
@@ -61,11 +68,13 @@ function RootLayoutContent() {
   }, [loaded]);
 
   if (!loaded) {
+    console.log('[RootLayoutContent] Fonts not loaded yet');
     return null; // This will keep the splash screen visible
   }
 
   // Auth-based routing
   if (!user) {
+    console.log('[RootLayoutContent] No user, showing login screen');
     // Not logged in: show login and register screens
     return (
       <Stack screenOptions={{ headerShown: false }}>
@@ -77,6 +86,7 @@ function RootLayoutContent() {
 
   // Logged in: show onboarding if not onboarded, otherwise main app
   if (!isOnboarded) {
+    console.log('[RootLayoutContent] User not onboarded, showing onboarding screen');
     return (
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
@@ -85,6 +95,7 @@ function RootLayoutContent() {
   }
 
   // Logged in and onboarded: show main app
+  console.log('[RootLayoutContent] User authenticated and onboarded, showing main app');
   return (
     <ErrorBoundary>
       <StatusBar style={isDarkMode ? "light" : "dark"} />

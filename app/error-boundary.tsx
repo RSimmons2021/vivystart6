@@ -93,17 +93,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <View style={styles.container}>
-          <View style={styles.content}>
-            <Text style={styles.title}>Something went wrong</Text>
-            <Text style={styles.subtitle}>{this.state.error?.message}</Text>
-            {Platform.OS !== 'web' && (
-              <Text style={styles.description}>
-                Please check your device logs for more details.
-              </Text>
-            )}
-          </View>
-        </View>
+        <View style={styles.content}>
+        <Text style={styles.title}>Something went wrong</Text>
+        <Text style={styles.subtitle}>{this.state.error?.message}</Text>
+        {Platform.OS !== 'web' && (
+          <Text style={styles.description}>
+            Please check your device logs for more details.
+          </Text>
+        )}
+      </View>
       );
     }
 
@@ -115,31 +113,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+  },
+  stackTrace: {
+    color: '#666',
+    fontSize: 12,
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-  },
-  title: {
-    fontSize: 36,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    marginBottom: 8,
+    backgroundColor: '#f8f8f8',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 10,
     textAlign: 'center',
   },
   description: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
-}); 
+});
 
 export default ErrorBoundary;
