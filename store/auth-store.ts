@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 
-interface AuthState {
+export interface AuthState {
   user: any | null;
   loading: boolean;
   error: string | null;

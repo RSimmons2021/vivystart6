@@ -13,6 +13,7 @@ import { useGamificationStore } from "@/store/gamification-store";
 import { AuthProvider } from '@/context/AuthProvider';
 import { useAuth } from '@/context/AuthProvider';
 import StripeProvider from '@/lib/StripeProvider';
+import { AuthState } from '@/store/auth-store';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -39,7 +40,7 @@ function RootLayoutContent() {
   const { isDarkMode } = useThemeStore();
   const { updateLoginStreak } = useGamificationStore();
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
+  const { user } = useAuth() as AuthState;
   
   console.log('[RootLayoutContent] Auth state:', { user, isOnboarded });
   
@@ -150,6 +151,17 @@ function RootLayoutContent() {
           }} 
         />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen 
+          name="subscription/index" 
+          options={{ 
+            title: "Subscription",
+            headerStyle: {
+              backgroundColor: themeColors.background,
+            },
+            headerTintColor: themeColors.text,
+            headerShadowVisible: false,
+          }} 
+        />
       </Stack>
     </ErrorBoundary>
   );
