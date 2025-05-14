@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "esnext"],
+    "strict": true,
+    "esModuleInterop": true,
+    "types": ["@deno-types/lib_deno_fetch"]
+  },
+  "include": ["index.ts"]
+}

@@ -12,6 +12,7 @@ import { useThemeStore } from "@/store/theme-store";
 import { useGamificationStore } from "@/store/gamification-store";
 import { AuthProvider } from '@/context/AuthProvider';
 import { useAuth } from '@/context/AuthProvider';
+import StripeProvider from '@/lib/StripeProvider';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -25,7 +26,9 @@ export default function RootLayout() {
   console.log('[RootLayout] Rendering root layout');
   return (
     <AuthProvider>
-      <RootLayoutContent />
+      <StripeProvider>
+        <RootLayoutContent />
+      </StripeProvider>
     </AuthProvider>
   );
 }
