@@ -14,6 +14,9 @@ import { AuthProvider } from '@/context/AuthProvider';
 import { useAuth } from '@/context/AuthProvider';
 import StripeProvider from '@/lib/StripeProvider';
 import { AuthState } from '@/store/auth-store';
+import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase'; // Import supabase client
+import { useState } from 'react'; // Import useState
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -41,8 +44,47 @@ function RootLayoutContent() {
   const { updateLoginStreak } = useGamificationStore();
   const colorScheme = useColorScheme();
   const { user } = useAuth() as AuthState;
-  
+  const router = useRouter();
+
+  const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null); // State to track subscription status
+
   console.log('[RootLayoutContent] Auth state:', { user, isOnboarded });
+
+  // Fetch user's subscription status after authentication and onboarding
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (user && isOnboarded) {
+        // Fetching subscription status from the 'users' table
+        const { data, error } = await supabase
+          .from('users')
+          .select('subscription_status')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching subscription status:', error);
+          setIsSubscribed(false); // Assume not subscribed on error
+        } else {
+          // TODO: Adjust this logic based on your actual subscription status values
+          setIsSubscribed(data?.subscription_status === 'active');
+        }
+      } else {
+        setIsSubscribed(null); // Reset status if not authenticated or onboarded
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [user, isOnboarded]); // Refetch when user or onboarding status changes
+
+  // Determine if the subscription modal should be shown
+  const needsSubscription = user && isOnboarded && isSubscribed === false;
+
+  useEffect(() => {
+    if (needsSubscription) {
+      // Navigate to the subscription modal
+      router.push('/modal' as any); // Using the existing modal route for now, casting to any to bypass type error
+    }
+  }, [needsSubscription, router]);
   
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
@@ -105,63 +147,65 @@ function RootLayoutContent() {
       <StatusBar style={isDarkMode ? "light" : "dark"} />
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="settings" 
-          options={{ 
+        <Stack.Screen
+          name="settings"
+          options={{
             title: "Settings",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="meal/[id]" 
-          options={{ 
+        <Stack.Screen
+          name="meal/[id]"
+          options={{
             title: "Meal Details",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="journey/[id]" 
-          options={{ 
+        <Stack.Screen
+          name="journey/[id]"
+          options={{
             title: "Journey Stage",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="achievements" 
-          options={{ 
+        <Stack.Screen
+          name="achievements"
+          options={{
             headerShown: false,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="challenges" 
-          options={{ 
+        <Stack.Screen
+          name="challenges"
+          options={{
             headerShown: false,
-          }} 
+          }}
         />
+        {/* The modal screen will now be used for the subscription popup */}
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        <Stack.Screen 
-          name="subscription/index" 
-          options={{ 
+        {/* The subscription screen is no longer directly navigable as a full screen */}
+        {/* <Stack.Screen
+          name="subscription/index"
+          options={{
             title: "Subscription",
             headerStyle: {
               backgroundColor: themeColors.background,
             },
             headerTintColor: themeColors.text,
             headerShadowVisible: false,
-          }} 
-        />
+          }}
+        /> */}
       </Stack>
     </ErrorBoundary>
   );

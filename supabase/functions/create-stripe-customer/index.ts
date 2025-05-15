@@ -26,14 +26,14 @@ serve(async (req) => {
       },
     });
 
-    // Update the user's profile in Supabase with the Stripe customer ID
+    // Update the user's record in Supabase with the Stripe customer ID
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     const { error: updateError } = await supabaseAdmin
-      .from('profiles') // Assuming you have a 'profiles' table linked to auth.users
+      .from('users') // Use the 'users' table as per the provided schema
       .update({ stripe_customer_id: customer.id })
       .eq('id', record.id);
 
