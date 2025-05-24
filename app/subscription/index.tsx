@@ -30,13 +30,22 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
   onSubscriptionSuccess 
 }) => {
   console.log('[SubscriptionScreen] Component rendering...');
+  console.log('[SubscriptionScreen] Props:', { isModal, hasOnSubscriptionSuccess: !!onSubscriptionSuccess });
   
   let stripe;
   try {
+    console.log('[SubscriptionScreen] About to call useStripe hook...');
     stripe = useStripe();
-    console.log('[SubscriptionScreen] useStripe called successfully, stripe instance:', !!stripe);
-  } catch (error) {
-    console.error('[SubscriptionScreen] Error calling useStripe:', error);
+    console.log('[SubscriptionScreen] useStripe called successfully');
+    console.log('[SubscriptionScreen] Stripe instance available:', !!stripe);
+    console.log('[SubscriptionScreen] Stripe instance type:', typeof stripe);
+    if (stripe) {
+      console.log('[SubscriptionScreen] Stripe instance methods:', Object.keys(stripe).slice(0, 10));
+    }
+  } catch (error: any) {
+    console.error('[SubscriptionScreen] CRITICAL ERROR calling useStripe:', error);
+    console.error('[SubscriptionScreen] Error message:', error.message);
+    console.error('[SubscriptionScreen] Error stack:', error.stack);
     throw error;
   }
   

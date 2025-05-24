@@ -20,6 +20,9 @@ import { supabase } from '@/lib/supabase'; // Import supabase client
 import { useState } from 'react'; // Import useState
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+// Import the modal component directly
+import SubscriptionModalScreen from './modal';
+
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: "(tabs)",
@@ -55,7 +58,8 @@ function RootLayoutContent() {
   // Fetch user's subscription status after authentication and onboarding
   useEffect(() => {
     const fetchSubscriptionStatus = async () => {
-      if (user && isOnboarded) {
+      // Modified: Check subscription even if not onboarded (for testing)
+      if (user) {
         console.log('[RootLayoutContent] Checking subscription status for user:', user.id);
         
         // TEMPORARY: Force show subscription modal for testing
@@ -90,16 +94,17 @@ function RootLayoutContent() {
           }
         }
       } else {
-        console.log('[RootLayoutContent] User not ready for subscription check:', { user: !!user, isOnboarded });
-        setIsSubscribed(null); // Reset status if not authenticated or onboarded
+        console.log('[RootLayoutContent] User not ready for subscription check:', { user: !!user });
+        setIsSubscribed(null); // Reset status if not authenticated
       }
     };
 
     fetchSubscriptionStatus();
-  }, [user, isOnboarded]); // Refetch when user or onboarding status changes
+  }, [user]); // Removed isOnboarded dependency
 
   // Determine if the subscription modal should be shown
-  const needsSubscription = user && isOnboarded && isSubscribed === false;
+  // Modified: Show subscription modal even if not onboarded (for testing)
+  const needsSubscription = user && isSubscribed === false;
 
   console.log('[RootLayoutContent] Subscription state:', { 
     user: !!user, 
@@ -108,39 +113,75 @@ function RootLayoutContent() {
     needsSubscription 
   });
 
+  console.log('[RootLayoutContent] 🔍 DETAILED DEBUG:', {
+    userExists: !!user,
+    userEmail: user?.email,
+    isSubscribedValue: isSubscribed,
+    isSubscribedType: typeof isSubscribed,
+    needsSubscriptionCalc: user && isSubscribed === false,
+    needsSubscription: needsSubscription
+  });
+
+  // Force update stores to prevent navigation conflicts
+  useEffect(() => {
+    if (user && needsSubscription) {
+      // Ensure all stores know we're in subscription mode
+      console.log('[RootLayoutContent] 🛡️ Enforcing subscription mode - preventing navigation overrides');
+    }
+  }, [user, needsSubscription]);
+
   useEffect(() => {
     if (needsSubscription) {
-      console.log('[RootLayoutContent] 🚀 NAVIGATING TO SUBSCRIPTION MODAL!');
-      // Navigate to the subscription modal
-      router.push('/modal' as any); // Using the existing modal route for now, casting to any to bypass type error
+      console.log('[RootLayoutContent] 🚀 USER NEEDS SUBSCRIPTION - WILL SHOW MODAL!');
     } else {
       console.log('[RootLayoutContent] Not showing subscription modal:', { needsSubscription });
     }
   }, [needsSubscription, router]);
 
-  // If user needs subscription, only show the subscription modal
+  // Auth-based routing
+  if (!user) {
+    console.log('[RootLayoutContent] No user, showing login screen');
+    // Not logged in: show login and register screens
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="login" options={{ headerShown: false, gestureEnabled: false }} />
+          {/* If you have a register screen, add it here: <Stack.Screen name="register" /> */}
+        </Stack>
+      </GestureHandlerRootView>
+    );
+  }
+
+  // Check subscription BEFORE onboarding (for testing)
+  // If user needs subscription, show modal regardless of onboarding status
   if (needsSubscription) {
-    console.log('[RootLayoutContent] 🔒 User needs subscription - blocking app access');
+    console.log('[RootLayoutContent] 🔒 User needs subscription - showing subscription modal before onboarding');
+    console.log('[RootLayoutContent] About to render direct modal component...');
+    console.log('[RootLayoutContent] ⚠️ BLOCKING ALL OTHER NAVIGATION - SUBSCRIPTION REQUIRED');
+    console.log('[RootLayoutContent] 🎯 Full SubscriptionScreen will now be rendered!');
+    
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ErrorBoundary>
           <StatusBar style={isDarkMode ? "light" : "dark"} />
-          <Stack>
-            {/* Only show the subscription modal - block all other navigation */}
-            <Stack.Screen 
-              name="modal" 
-              options={{ 
-                presentation: 'modal',
-                headerShown: false,
-                gestureEnabled: false, // Disable swipe to dismiss
-              }} 
-            />
-          </Stack>
+          <SubscriptionModalScreen />
         </ErrorBoundary>
       </GestureHandlerRootView>
     );
   }
-  
+
+  // Logged in and subscribed: show onboarding if not onboarded, otherwise main app
+  if (!isOnboarded) {
+    console.log('[RootLayoutContent] User not onboarded, showing onboarding screen');
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+        </Stack>
+      </GestureHandlerRootView>
+    );
+  }
+
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
   
@@ -171,32 +212,6 @@ function RootLayoutContent() {
   if (!loaded) {
     console.log('[RootLayoutContent] Fonts not loaded yet');
     return null; // This will keep the splash screen visible
-  }
-
-  // Auth-based routing
-  if (!user) {
-    console.log('[RootLayoutContent] No user, showing login screen');
-    // Not logged in: show login and register screens
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="login" options={{ headerShown: false, gestureEnabled: false }} />
-          {/* If you have a register screen, add it here: <Stack.Screen name="register" /> */}
-        </Stack>
-      </GestureHandlerRootView>
-    );
-  }
-
-  // Logged in: show onboarding if not onboarded, otherwise main app
-  if (!isOnboarded) {
-    console.log('[RootLayoutContent] User not onboarded, showing onboarding screen');
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-        </Stack>
-      </GestureHandlerRootView>
-    );
   }
 
   // Logged in and onboarded: show main app
@@ -287,6 +302,15 @@ function RootLayoutContent() {
               headerTintColor: themeColors.text,
               headerShadowVisible: false,
             }}
+          />
+          {/* Test modal route */}
+          <Stack.Screen 
+            name="modal" 
+            options={{ 
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+            }} 
           />
         </Stack>
       </ErrorBoundary>

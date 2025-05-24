@@ -56,9 +56,11 @@ export default function LoginScreen() {
       }
       if (data?.onboarded) {
         console.log('[LoginScreen] User is onboarded. Navigating to (tabs)');
+        console.log('[LoginScreen] ⚠️ NOTE: If subscription modal should show, layout will override this navigation');
         router.replace('/(tabs)');
       } else {
         console.log('[LoginScreen] User is NOT onboarded. Navigating to onboarding');
+        console.log('[LoginScreen] ⚠️ NOTE: If subscription modal should show, layout will override this navigation');
         router.replace('/onboarding');
       }
     } else {

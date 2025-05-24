@@ -7,8 +7,37 @@ import { useAuthStore } from "@/store/auth-store";
 import SubscriptionScreen from "./subscription";
 
 export default function SubscriptionModalScreen() {
+  console.log('[SubscriptionModal] Component rendering...');
+  console.log('[SubscriptionModal] SubscriptionScreen imported:', !!SubscriptionScreen);
+  
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+
+  console.log('[SubscriptionModal] About to render SubscriptionScreen...');
+
+  const handleSubscriptionSuccess = async () => {
+    console.log('[SubscriptionModal] 🎉 Subscription successful! Handling success...');
+    
+    try {
+      // Update user's subscription status in the database
+      const { error } = await supabase
+        .from('users')
+        .update({ subscription_status: 'active' })
+        .eq('id', user?.id);
+
+      if (error) {
+        console.error('[SubscriptionModal] Error updating subscription status:', error);
+      } else {
+        console.log('[SubscriptionModal] ✅ Subscription status updated successfully');
+      }
+
+      // Navigate to onboarding or main app
+      console.log('[SubscriptionModal] Navigating to onboarding...');
+      router.replace('/onboarding');
+    } catch (error) {
+      console.error('[SubscriptionModal] Error in handleSubscriptionSuccess:', error);
+    }
+  };
 
   // Prevent back button on Android from dismissing the modal
   useEffect(() => {
@@ -23,45 +52,13 @@ export default function SubscriptionModalScreen() {
     return () => backHandler.remove();
   }, []);
 
-  // Disable swipe-to-dismiss gesture by not providing a way to close the modal
-  // The modal can only be closed by successful subscription
-
-  const handleSubscriptionSuccess = async () => {
-    console.log('[SubscriptionModal] Subscription successful, updating user status');
-    
-    if (user) {
-      try {
-        // Update the user's subscription status in the database
-        // Note: In production, this should be handled by Stripe webhooks
-        const { error } = await supabase
-          .from('users')
-          .update({ subscription_status: 'active' })
-          .eq('id', user.id);
-
-        if (error) {
-          console.error('[SubscriptionModal] Error updating subscription status:', error);
-        } else {
-          console.log('[SubscriptionModal] Successfully updated subscription status');
-        }
-      } catch (error) {
-        console.error('[SubscriptionModal] Exception updating subscription status:', error);
-      }
-    }
-
-    // Navigate back to main app after successful subscription
-    console.log('[SubscriptionModal] Navigating back to main app');
-    router.dismissAll(); // Dismiss all modals
-    router.replace('/(tabs)' as any); // Navigate to main app
-  };
-
   return (
     <>
+      <StatusBar style={Platform.OS === "ios" ? "light" : "auto"} />
       <SubscriptionScreen 
-        isModal={true} 
+        isModal={true}
         onSubscriptionSuccess={handleSubscriptionSuccess}
       />
-      {/* Use a light status bar on iOS to account for the black space above the modal */}
-      <StatusBar style={Platform.OS === "ios" ? "light" : "auto"} />
     </>
   );
 }
