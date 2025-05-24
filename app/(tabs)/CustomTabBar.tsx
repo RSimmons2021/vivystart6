@@ -7,21 +7,23 @@ import Colors from '@/constants/colors';
 let ICONS_MAP: Record<string, any>;
 if (Platform.OS === 'web') {
   // @ts-ignore
-  const { Home, LineChart, Target, MessageSquare, Syringe } = require('lucide-react');
+  const { Home, LineChart, Target, MessageSquare, Syringe, Utensils } = require('lucide-react');
   ICONS_MAP = {
     index: Home,
     goals: Target,
     coach: MessageSquare,
     shots: Syringe,
+    meals: Utensils,
     progress: LineChart,
   };
 } else {
-  const { Home, LineChart, Target, MessageSquare, Syringe } = require('lucide-react-native');
+  const { Home, LineChart, Target, MessageSquare, Syringe, Utensils } = require('lucide-react-native');
   ICONS_MAP = {
     index: Home,
     goals: Target,
     coach: MessageSquare,
     shots: Syringe,
+    meals: Utensils,
     progress: LineChart,
   };
 }
@@ -30,6 +32,7 @@ const TITLES_MAP: Record<string, string> = {
   goals: 'Goals',
   coach: 'Coach',
   shots: 'Shots',
+  meals: 'Meals AI',
   progress: 'Progress',
 };
 

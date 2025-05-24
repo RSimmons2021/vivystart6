@@ -6,7 +6,8 @@ import {
   LineChart, 
   Target, 
   MessageSquare, 
-  Syringe
+  Syringe,
+  Utensils
 } from 'lucide-react-native';
 import { useThemeStore } from '@/store/theme-store';
 import Colors from '@/constants/colors';
@@ -61,6 +62,13 @@ export default function TabLayout() {
         options={{
           title: 'Shots',
           tabBarIcon: ({ color }) => <Syringe size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="meals"
+        options={{
+          title: 'Meals AI',
+          tabBarIcon: ({ color }) => <Utensils size={24} color={color} />,
         }}
       />
       <Tabs.Screen
