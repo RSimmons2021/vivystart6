@@ -82,6 +82,12 @@ function RootLayoutContent() {
           console.log('[RootLayoutContent] Subscription status:', subscriptionStatus);
           console.log('[RootLayoutContent] Is active subscription?', isActive);
           setIsSubscribed(isActive);
+          
+          // If no subscription status is set, default to inactive (requires subscription)
+          if (!subscriptionStatus) {
+            console.log('[RootLayoutContent] No subscription status found, defaulting to inactive');
+            setIsSubscribed(false);
+          }
         }
       } else {
         console.log('[RootLayoutContent] User not ready for subscription check:', { user: !!user, isOnboarded });
@@ -111,6 +117,29 @@ function RootLayoutContent() {
       console.log('[RootLayoutContent] Not showing subscription modal:', { needsSubscription });
     }
   }, [needsSubscription, router]);
+
+  // If user needs subscription, only show the subscription modal
+  if (needsSubscription) {
+    console.log('[RootLayoutContent] 🔒 User needs subscription - blocking app access');
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ErrorBoundary>
+          <StatusBar style={isDarkMode ? "light" : "dark"} />
+          <Stack>
+            {/* Only show the subscription modal - block all other navigation */}
+            <Stack.Screen 
+              name="modal" 
+              options={{ 
+                presentation: 'modal',
+                headerShown: false,
+                gestureEnabled: false, // Disable swipe to dismiss
+              }} 
+            />
+          </Stack>
+        </ErrorBoundary>
+      </GestureHandlerRootView>
+    );
+  }
   
   // Get theme-specific colors
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
@@ -223,8 +252,6 @@ function RootLayoutContent() {
               headerShown: false,
             }}
           />
-          {/* The modal screen will now be used for the subscription popup */}
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           {/* Add standalone subscription route for direct navigation */}
           <Stack.Screen
             name="subscription/index"
