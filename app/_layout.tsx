@@ -62,9 +62,9 @@ function RootLayoutContent() {
       if (user) {
         console.log('[RootLayoutContent] Checking subscription status for user:', user.id);
         
-        // TEMPORARY: Force show subscription modal for testing
-        console.log('[RootLayoutContent] 🧪 FORCING SUBSCRIPTION MODAL FOR TESTING');
-        setIsSubscribed(false);
+        // TEMPORARY: Bypass subscription check for main app testing
+        console.log('[RootLayoutContent] 🚀 BYPASSING SUBSCRIPTION CHECK FOR TESTING');
+        setIsSubscribed(true);
         return;
         
         // Fetching subscription status from the 'users' table
@@ -122,7 +122,7 @@ function RootLayoutContent() {
     needsSubscription: needsSubscription
   });
 
-  // Force update stores to prevent navigation conflicts
+  // Force update stores to prevent navigation conflicts - ALWAYS called
   useEffect(() => {
     if (user && needsSubscription) {
       // Ensure all stores know we're in subscription mode
@@ -130,6 +130,7 @@ function RootLayoutContent() {
     }
   }, [user, needsSubscription]);
 
+  // Log subscription modal state - ALWAYS called
   useEffect(() => {
     if (needsSubscription) {
       console.log('[RootLayoutContent] 🚀 USER NEEDS SUBSCRIPTION - WILL SHOW MODAL!');
@@ -137,6 +138,39 @@ function RootLayoutContent() {
       console.log('[RootLayoutContent] Not showing subscription modal:', { needsSubscription });
     }
   }, [needsSubscription, router]);
+
+  // Get theme-specific colors
+  const themeColors = isDarkMode ? Colors.dark : Colors.light;
+  
+  const [loaded, error] = useFonts({
+    ...FontAwesome.font,
+  });
+
+  console.log('[RootLayoutContent] Font loading state:', { loaded, error });
+
+  useEffect(() => {
+    if (error) {
+      console.error('[RootLayoutContent] Font loading error:', error);
+      throw error;
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (loaded) {
+      console.log('[RootLayoutContent] Fonts loaded, hiding splash screen');
+      // Only hide the splash screen after the fonts have loaded and the UI is ready
+      SplashScreen.hideAsync().catch(console.error);
+      
+      // Update login streak when app loads
+      updateLoginStreak();
+    }
+  }, [loaded]);
+
+  // Early returns AFTER all hooks
+  if (!loaded) {
+    console.log('[RootLayoutContent] Fonts not loaded yet');
+    return null; // This will keep the splash screen visible
+  }
 
   // Auth-based routing
   if (!user) {
@@ -180,38 +214,6 @@ function RootLayoutContent() {
         </Stack>
       </GestureHandlerRootView>
     );
-  }
-
-  // Get theme-specific colors
-  const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  
-  const [loaded, error] = useFonts({
-    ...FontAwesome.font,
-  });
-
-  console.log('[RootLayoutContent] Font loading state:', { loaded, error });
-
-  useEffect(() => {
-    if (error) {
-      console.error('[RootLayoutContent] Font loading error:', error);
-      throw error;
-    }
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      console.log('[RootLayoutContent] Fonts loaded, hiding splash screen');
-      // Only hide the splash screen after the fonts have loaded and the UI is ready
-      SplashScreen.hideAsync().catch(console.error);
-      
-      // Update login streak when app loads
-      updateLoginStreak();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    console.log('[RootLayoutContent] Fonts not loaded yet');
-    return null; // This will keep the splash screen visible
   }
 
   // Logged in and onboarded: show main app
