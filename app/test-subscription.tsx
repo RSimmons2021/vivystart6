@@ -8,17 +8,17 @@ export default function TestSubscription() {
 
   const testModalNavigation = () => {
     console.log('[TestSubscription] Testing modal navigation...');
-    router.push('/modal');
+    router.push('modal' as any);
   };
 
   const testDirectSubscription = () => {
     console.log('[TestSubscription] Testing direct subscription navigation...');
-    router.push('/subscription');
+    router.push('subscription' as any);
   };
 
   const testStripeHook = () => {
     console.log('[TestSubscription] Testing Stripe hook...');
-    router.push('/stripe-test');
+    router.push('stripe-test' as any);
   };
 
   return (

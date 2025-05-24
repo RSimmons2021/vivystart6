@@ -70,6 +70,16 @@ const SubscriptionScreen = () => {
       return;
     }
 
+    // Check if this is a temp/invalid price ID
+    if (selectedPriceId.includes('temp') || selectedPriceId.includes('invalid')) {
+      Alert.alert(
+        'Plan Not Available', 
+        'This subscription plan is not yet configured. Please select the Weekly Plan or contact support.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setLoading(true);
     console.log('[Subscription] Creating checkout session for price:', selectedPriceId);
 
@@ -85,14 +95,30 @@ const SubscriptionScreen = () => {
 
       if (error) {
         console.error('[Subscription] Error creating checkout session:', error);
-        Alert.alert('Error', `Checkout session creation failed: ${error.message}`);
+        // Check for specific error types
+        let errorMessage = error.message;
+        if (error.message.includes('No such price')) {
+          errorMessage = 'This subscription plan is not available. Please select the Weekly Plan.';
+        }
+        Alert.alert('Error', `Checkout session creation failed: ${errorMessage}`);
         setLoading(false);
         return;
       }
 
       if (!data || !data.id) {
         console.error('[Subscription] No session ID returned:', data);
-        Alert.alert('Error', 'No checkout session ID received from server');
+        // Show more detailed error if available
+        let errorMsg = 'No checkout session ID received from server';
+        if (data && data.error) {
+          errorMsg += `: ${data.error}`;
+          if (data.type) {
+            errorMsg += ` (${data.type})`;
+          }
+          if (data.code) {
+            errorMsg += ` [${data.code}]`;
+          }
+        }
+        Alert.alert('Error', errorMsg);
         setLoading(false);
         return;
       }
@@ -114,7 +140,14 @@ const SubscriptionScreen = () => {
       }
     } catch (error: any) {
       console.error('[Subscription] An unexpected error occurred:', error);
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      let errorMessage = error.message || 'An unexpected error occurred';
+      
+      // Handle specific Stripe integration errors
+      if (errorMessage.includes('live mode') && errorMessage.includes('test mode')) {
+        errorMessage = 'There is a configuration mismatch between test and live modes. Please contact support.';
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
