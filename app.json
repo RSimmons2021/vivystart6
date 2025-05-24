@@ -33,6 +33,7 @@
       "typedRoutes": true,
       "tsconfigPaths": true,
       "newArchEnabled": true
-    }
+    },
+    "newArchEnabled": true
   }
 }

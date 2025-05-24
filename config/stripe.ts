@@ -1,8 +1,7 @@
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
 // Get the publishable key from environment variables
-const publishableKey = Constants.expoConfig?.extra?.stripePublishableKey;
+const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
 // Stripe configuration
 export const stripeConfig = {
@@ -18,18 +17,20 @@ export const stripeEndpoints = {
   cancelSubscription: '/api/cancel-subscription',
 };
 
-// Subscription plans
+// Subscription plans - Updated with your actual price ID
 export const subscriptionPlans = {
-  basic: {
-    id: 'price_basic',
-    name: 'Basic Plan',
-    price: 9.99,
+  weekly: {
+    id: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || 'price_1RMJq5H2vZEETphMrfjQ4RdG', // Using env var or fallback
+    name: 'Weekly Plan',
+    price: 2.99,
+    interval: 'week',
     features: ['Feature 1', 'Feature 2', 'Feature 3'],
   },
-  premium: {
-    id: 'price_premium',
-    name: 'Premium Plan',
-    price: 19.99,
-    features: ['All Basic Features', 'Premium Feature 1', 'Premium Feature 2'],
+  monthly: {
+    id: 'YOUR_MONTHLY_PRICE_ID', // TODO: Replace with your actual Monthly Price ID
+    name: 'Monthly Plan',
+    price: 9.99,
+    interval: 'month',
+    features: ['All Weekly Features', 'Premium Feature 1', 'Premium Feature 2'],
   },
 }; 

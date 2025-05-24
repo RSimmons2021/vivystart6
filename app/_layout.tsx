@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -17,6 +18,7 @@ import { AuthState } from '@/store/auth-store';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase'; // Import supabase client
 import { useState } from 'react'; // Import useState
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -123,10 +125,12 @@ function RootLayoutContent() {
     console.log('[RootLayoutContent] No user, showing login screen');
     // Not logged in: show login and register screens
     return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="login" options={{ headerShown: false, gestureEnabled: false }} />
-        {/* If you have a register screen, add it here: <Stack.Screen name="register" /> */}
-      </Stack>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="login" options={{ headerShown: false, gestureEnabled: false }} />
+          {/* If you have a register screen, add it here: <Stack.Screen name="register" /> */}
+        </Stack>
+      </GestureHandlerRootView>
     );
   }
 
@@ -134,79 +138,83 @@ function RootLayoutContent() {
   if (!isOnboarded) {
     console.log('[RootLayoutContent] User not onboarded, showing onboarding screen');
     return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-      </Stack>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+        </Stack>
+      </GestureHandlerRootView>
     );
   }
 
   // Logged in and onboarded: show main app
   console.log('[RootLayoutContent] User authenticated and onboarded, showing main app');
   return (
-    <ErrorBoundary>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <Stack initialRouteName="(tabs)">
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="settings"
-          options={{
-            title: "Settings",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTintColor: themeColors.text,
-            headerShadowVisible: false,
-          }}
-        />
-        <Stack.Screen
-          name="meal/[id]"
-          options={{
-            title: "Meal Details",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTintColor: themeColors.text,
-            headerShadowVisible: false,
-          }}
-        />
-        <Stack.Screen
-          name="journey/[id]"
-          options={{
-            title: "Journey Stage",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTintColor: themeColors.text,
-            headerShadowVisible: false,
-          }}
-        />
-        <Stack.Screen
-          name="achievements"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="challenges"
-          options={{
-            headerShown: false,
-          }}
-        />
-        {/* The modal screen will now be used for the subscription popup */}
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        {/* The subscription screen is no longer directly navigable as a full screen */}
-        {/* <Stack.Screen
-          name="subscription/index"
-          options={{
-            title: "Subscription",
-            headerStyle: {
-              backgroundColor: themeColors.background,
-            },
-            headerTintColor: themeColors.text,
-            headerShadowVisible: false,
-          }}
-        /> */}
-      </Stack>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <Stack initialRouteName="(tabs)">
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="settings"
+            options={{
+              title: "Settings",
+              headerStyle: {
+                backgroundColor: themeColors.background,
+              },
+              headerTintColor: themeColors.text,
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="meal/[id]"
+            options={{
+              title: "Meal Details",
+              headerStyle: {
+                backgroundColor: themeColors.background,
+              },
+              headerTintColor: themeColors.text,
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="journey/[id]"
+            options={{
+              title: "Journey Stage",
+              headerStyle: {
+                backgroundColor: themeColors.background,
+              },
+              headerTintColor: themeColors.text,
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="achievements"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="challenges"
+            options={{
+              headerShown: false,
+            }}
+          />
+          {/* The modal screen will now be used for the subscription popup */}
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          {/* Add standalone subscription route for direct navigation */}
+          <Stack.Screen
+            name="subscription/index"
+            options={{
+              title: "Subscription",
+              headerStyle: {
+                backgroundColor: themeColors.background,
+              },
+              headerTintColor: themeColors.text,
+              headerShadowVisible: false,
+            }}
+          />
+        </Stack>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }
