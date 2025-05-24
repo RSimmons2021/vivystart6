@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { useStripe } from '@/lib/StripeProvider';
+import { useStripe } from '@/lib';
 import { supabase } from '@/lib/supabase';
 import { subscriptionPlans } from '@/config/stripe';
 
@@ -21,7 +21,17 @@ const subscriptionOptions = [
 ];
 
 const SubscriptionScreen = () => {
-  const stripe = useStripe();
+  console.log('[SubscriptionScreen] Component rendering...');
+  
+  let stripe;
+  try {
+    stripe = useStripe();
+    console.log('[SubscriptionScreen] useStripe called successfully, stripe instance:', !!stripe);
+  } catch (error) {
+    console.error('[SubscriptionScreen] Error calling useStripe:', error);
+    throw error;
+  }
+  
   const [loading, setLoading] = useState(false);
   const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');

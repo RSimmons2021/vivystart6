@@ -14,7 +14,11 @@ create table if not exists users (
   goal_weight float,
   height float,
   start_date date,
-  target_date date
+  target_date date,
+  onboarded boolean default false,
+  subscription_status text default null,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
 );
 
 -- GOALS TABLE

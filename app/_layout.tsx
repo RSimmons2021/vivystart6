@@ -56,6 +56,13 @@ function RootLayoutContent() {
   useEffect(() => {
     const fetchSubscriptionStatus = async () => {
       if (user && isOnboarded) {
+        console.log('[RootLayoutContent] Checking subscription status for user:', user.id);
+        
+        // TEMPORARY: Force show subscription modal for testing
+        console.log('[RootLayoutContent] 🧪 FORCING SUBSCRIPTION MODAL FOR TESTING');
+        setIsSubscribed(false);
+        return;
+        
         // Fetching subscription status from the 'users' table
         const { data, error } = await supabase
           .from('users')
@@ -63,14 +70,21 @@ function RootLayoutContent() {
           .eq('id', user.id)
           .single();
 
+        console.log('[RootLayoutContent] Subscription query result:', { data, error });
+
         if (error) {
-          console.error('Error fetching subscription status:', error);
+          console.error('[RootLayoutContent] Error fetching subscription status:', error);
+          console.log('[RootLayoutContent] Setting isSubscribed to FALSE due to error');
           setIsSubscribed(false); // Assume not subscribed on error
         } else {
-          // TODO: Adjust this logic based on your actual subscription status values
-          setIsSubscribed(data?.subscription_status === 'active');
+          const subscriptionStatus = data?.subscription_status;
+          const isActive = subscriptionStatus === 'active';
+          console.log('[RootLayoutContent] Subscription status:', subscriptionStatus);
+          console.log('[RootLayoutContent] Is active subscription?', isActive);
+          setIsSubscribed(isActive);
         }
       } else {
+        console.log('[RootLayoutContent] User not ready for subscription check:', { user: !!user, isOnboarded });
         setIsSubscribed(null); // Reset status if not authenticated or onboarded
       }
     };
@@ -81,10 +95,20 @@ function RootLayoutContent() {
   // Determine if the subscription modal should be shown
   const needsSubscription = user && isOnboarded && isSubscribed === false;
 
+  console.log('[RootLayoutContent] Subscription state:', { 
+    user: !!user, 
+    isOnboarded, 
+    isSubscribed, 
+    needsSubscription 
+  });
+
   useEffect(() => {
     if (needsSubscription) {
+      console.log('[RootLayoutContent] 🚀 NAVIGATING TO SUBSCRIPTION MODAL!');
       // Navigate to the subscription modal
       router.push('/modal' as any); // Using the existing modal route for now, casting to any to bypass type error
+    } else {
+      console.log('[RootLayoutContent] Not showing subscription modal:', { needsSubscription });
     }
   }, [needsSubscription, router]);
   
@@ -206,6 +230,30 @@ function RootLayoutContent() {
             name="subscription/index"
             options={{
               title: "Subscription",
+              headerStyle: {
+                backgroundColor: themeColors.background,
+              },
+              headerTintColor: themeColors.text,
+              headerShadowVisible: false,
+            }}
+          />
+          {/* Test subscription route for debugging */}
+          <Stack.Screen
+            name="test-subscription"
+            options={{
+              title: "Test Subscription",
+              headerStyle: {
+                backgroundColor: themeColors.background,
+              },
+              headerTintColor: themeColors.text,
+              headerShadowVisible: false,
+            }}
+          />
+          {/* Basic Stripe hook test */}
+          <Stack.Screen
+            name="stripe-test"
+            options={{
+              title: "Stripe Test",
               headerStyle: {
                 backgroundColor: themeColors.background,
               },

@@ -16,5 +16,6 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   }
 };
 
+// Always export useStripe from StripeContext regardless of platform
 export { useStripe } from './StripeContext';
 export default StripeProvider;
