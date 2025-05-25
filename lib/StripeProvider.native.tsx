@@ -68,7 +68,7 @@ const StripeProvider: React.FC<StripeProviderProps> = ({ children }) => {
   return (
     <RNStripeProvider publishableKey={publishableKey}>
       <StripeBridge>
-        {children}
+      {children}
       </StripeBridge>
     </RNStripeProvider>
   );
