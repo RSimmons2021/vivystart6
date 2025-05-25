@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -31,7 +31,7 @@ export default function ProgressScreen() {
   const { isDarkMode } = useThemeStore();
   const { weightUnit } = useUserStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  const { weightLogs, addWeightLog, dailyLogs, getWeeklyScore, fetchWeightLogs, fetchDailyLogs, fetchStepLogs } = useHealthStore();
+  const { weightLogs, addWeightLog, dailyLogs, getWeeklyScore, fetchWeightLogs, fetchDailyLogs, fetchStepLogs, refreshAllDailyLogsFromMeals, meals } = useHealthStore();
   const [loading, setLoading] = useState(false);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [modalVisible, setModalVisible] = useState(false);
@@ -59,7 +59,23 @@ export default function ProgressScreen() {
   const today = new Date();
   const weekStart = format(startOfWeek(today), 'yyyy-MM-dd');
   const weekEnd = format(endOfWeek(today), 'yyyy-MM-dd');
-  const weeklyScore = getWeeklyScore(weekStart, weekEnd);
+  const weeklyScore = useMemo(() => {
+    console.log('Progress tab: Calculating weekly score');
+    console.log('Daily logs count:', dailyLogs.length);
+    console.log('Week range:', weekStart, 'to', weekEnd);
+    
+    const relevantLogs = dailyLogs.filter(log => {
+      return log.date >= weekStart && log.date <= weekEnd;
+    });
+    console.log('Relevant logs for this week:', relevantLogs.length);
+    relevantLogs.forEach(log => {
+      console.log(`Log ${log.date}: protein=${log.proteinGrams}, fruitsVeggies=${log.fruitsVeggies}, steps=${log.steps}`);
+    });
+    
+    const score = getWeeklyScore(weekStart, weekEnd);
+    console.log('Calculated weekly score:', score);
+    return score;
+  }, [getWeeklyScore, weekStart, weekEnd, dailyLogs, meals]);
 
   // Weight loss calculation
   // Sort logs by date
@@ -82,9 +98,18 @@ export default function ProgressScreen() {
         fetchDailyLogs(),
         fetchStepLogs()
       ]);
+      // Refresh daily logs from meals to ensure scores are up to date
+      await refreshAllDailyLogsFromMeals();
       setLoading(false);
     })();
   }, [user?.id]);
+
+  // Refresh daily logs when meals change
+  useEffect(() => {
+    if (!user?.id || meals.length === 0) return;
+    console.log('Progress tab: Meals changed, refreshing daily logs...');
+    refreshAllDailyLogsFromMeals();
+  }, [meals.length, user?.id]);
 
   if (loading) {
     return (

@@ -32,7 +32,7 @@ export default function MealTrackerScreen() {
   const { user } = useUserStore();
   const { isDarkMode } = useThemeStore();
   const themeColors = isDarkMode ? Colors.dark : Colors.light;
-  const { meals, addMeal, deleteMeal, fetchMeals } = useHealthStore();
+  const { meals, addMeal, deleteMeal, fetchMeals, refreshAllDailyLogsFromMeals } = useHealthStore();
   const [loading, setLoading] = useState(false);
   const [mealModalVisible, setMealModalVisible] = useState(false);
 
@@ -138,6 +138,19 @@ export default function MealTrackerScreen() {
     setAddMealLoading(true);
     setAddMealError(null);
     try {
+      console.log('Adding meal with data:', {
+        date: format(new Date(), 'yyyy-MM-dd'),
+        time: format(new Date(), 'HH:mm'),
+        name: addMealForm.name,
+        description: addMealForm.description,
+        imageUri: addMealForm.imageUri,
+        fruitsVeggies: parseInt(addMealForm.fruitsVeggies) || 0,
+        protein: parseInt(addMealForm.protein) || 0,
+        carbs: parseInt(addMealForm.carbs) || 0,
+        fat: parseInt(addMealForm.fat) || 0,
+        calories: aiAnalysis?.calories || 0,
+      });
+      
       await addMeal({
         date: format(new Date(), 'yyyy-MM-dd'),
         time: format(new Date(), 'HH:mm'),
@@ -150,10 +163,18 @@ export default function MealTrackerScreen() {
         fat: parseInt(addMealForm.fat) || 0,
         calories: aiAnalysis?.calories || 0,
       });
+      console.log('Meal added successfully, fetching meals...');
+      
       await fetchMeals();
+      console.log('Meals fetched, refreshing daily logs...');
+      
+      await refreshAllDailyLogsFromMeals();
+      console.log('Daily logs refreshed successfully');
+      
       setMealModalVisible(false);
       resetAddMealForm();
     } catch (e) {
+      console.error('Error adding meal:', e);
       setAddMealError('Failed to add meal.');
     } finally {
       setAddMealLoading(false);

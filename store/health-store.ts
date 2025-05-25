@@ -59,6 +59,8 @@ interface HealthState {
   // Daily log methods
   getDailyLog: (date: string) => Promise<DailyLog | undefined>;
   updateDailyLog: (date: string, data: Partial<Omit<DailyLog, 'id' | 'date'>>) => void;
+  updateDailyLogFromMeals: (date: string) => Promise<void>;
+  refreshAllDailyLogsFromMeals: () => Promise<void>;
   
   // Fetch methods
   fetchWeightLogs: () => void;
@@ -356,7 +358,12 @@ export const useHealthStore = create<HealthState>()(
             maybeObj !== null &&
             !Array.isArray(maybeObj)
           ) {
-            set((state) => ({ meals: [...state.meals, { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) }] }));
+            const insertedMeal = { ...(maybeObj as Record<string, any>), date: ensureString((maybeObj as Record<string, any>).date) };
+            set((state) => ({ meals: [...state.meals, insertedMeal] }));
+            
+            // Update daily log with aggregated nutrition data
+            await get().updateDailyLogFromMeals(newMeal.date);
+            
             // --- Call achievement/challenge check for protein ---
             if (typeof newMeal.protein === 'number') {
               import('./gamification-store').then(({ useGamificationStore }) => {
@@ -364,9 +371,9 @@ export const useHealthStore = create<HealthState>()(
               });
             }
             // --- Call achievement/challenge check for fruits/vegetables ---
-            if (typeof newMeal.fruits === 'number') {
+            if (typeof newMeal.fruitsVeggies === 'number') {
               import('./gamification-store').then(({ useGamificationStore }) => {
-                useGamificationStore.getState().checkAchievementsAndChallenges('fruits', newMeal.fruits, user.id);
+                useGamificationStore.getState().checkAchievementsAndChallenges('fruits', newMeal.fruitsVeggies, user.id);
               });
             }
           }
@@ -385,10 +392,23 @@ export const useHealthStore = create<HealthState>()(
             .from('meals')
             .update([updateData]).eq('id', id);
           if (error) throw error;
+          
+          // Find the original meal to get its date
+          const originalMeal = get().meals.find(meal => meal.id === id);
+          const originalDate = originalMeal?.date;
+          
           set((state) => ({
             meals: state.meals.map((meal) => meal.id === id ? { ...meal, ...updateData, date: ensureString(updateData.date) } : meal),
             savedMeals: state.savedMeals.map((meal) => meal.id === id ? { ...meal, ...updateData, date: ensureString(updateData.date) } : meal)
           }));
+          
+          // Update daily logs for both old and new dates (if date changed)
+          if (originalDate) {
+            await get().updateDailyLogFromMeals(originalDate);
+          }
+          if (updateData.date && updateData.date !== originalDate) {
+            await get().updateDailyLogFromMeals(updateData.date);
+          }
         } catch (e) { /* handle error */ }
       },
       deleteMeal: async (id: string) => {
@@ -399,13 +419,23 @@ export const useHealthStore = create<HealthState>()(
         const user = useUserStore.getState().user;
         if (!user?.id) return;
         try {
+          // Find the meal to get its date before deletion
+          const mealToDelete = get().meals.find(meal => meal.id === id);
+          const mealDate = mealToDelete?.date;
+          
           const { error } = await supabase
             .from('meals')
             .delete()
             .eq('id', id)
             .eq('user_id', user.id);
           if (error) throw error;
+          
           set((state) => ({ meals: state.meals.filter((meal) => meal.id !== id) }));
+          
+          // Update daily log for the date of the deleted meal
+          if (mealDate) {
+            await get().updateDailyLogFromMeals(mealDate);
+          }
         } catch (e) { /* handle error */ }
       },
       saveMeal: async (id: string) => {
@@ -481,7 +511,12 @@ export const useHealthStore = create<HealthState>()(
             .eq('user_id', user.id)
             .order('date', { ascending: false });
           if (error) throw error;
-          if (data) set({ meals: data.map((meal: any) => ({ ...meal, date: ensureString(meal.date) })) });
+          if (data) {
+            set({ meals: data.map((meal: any) => ({ ...meal, date: ensureString(meal.date) })) });
+            
+            // Refresh daily logs from meals to ensure scores are up to date
+            await get().refreshAllDailyLogsFromMeals();
+          }
         } catch (e) { console.error('fetchMeals error:', e); }
       },
       
@@ -588,7 +623,11 @@ export const useHealthStore = create<HealthState>()(
           const { error } = await supabase
             .from('daily_logs')
             .upsert([{ ...data, date, user_id: user.id }], { onConflict: 'date,user_id' });
-          if (error) throw error;
+          if (error) {
+            console.error('updateDailyLog Supabase error:', error);
+            throw error;
+          }
+          console.log('updateDailyLog successful for date:', date);
           // --- Call achievement/challenge check for each nutrient/log type present ---
           for (const key of Object.keys(data)) {
             const value = (data as any)[key];
@@ -608,7 +647,88 @@ export const useHealthStore = create<HealthState>()(
               }
             }
           }
-        } catch (e) { console.error('updateDailyLog error:', e); }
+        } catch (e) { 
+          console.error('updateDailyLog error:', e); 
+        }
+      },
+      updateDailyLogFromMeals: async (date: string) => {
+        console.log('updateDailyLogFromMeals called for date:', date);
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        
+        // Get all meals for the specific date
+        const mealsForDate = get().meals.filter(meal => meal.date === date);
+        console.log('Found meals for date', date, ':', mealsForDate.length);
+        
+        // Calculate aggregated nutrition data
+        const totalProtein = mealsForDate.reduce((sum, meal) => sum + (meal.protein || 0), 0);
+        const totalFruitsVeggies = mealsForDate.reduce((sum, meal) => sum + (meal.fruitsVeggies || 0), 0);
+        const totalCalories = mealsForDate.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+        const totalCarbs = mealsForDate.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
+        const totalFat = mealsForDate.reduce((sum, meal) => sum + (meal.fat || 0), 0);
+        
+        console.log('Aggregated nutrition for', date, ':', {
+          protein: totalProtein,
+          fruitsVeggies: totalFruitsVeggies,
+          calories: totalCalories,
+          carbs: totalCarbs,
+          fat: totalFat
+        });
+        
+        // Update daily log with aggregated data (this will create if doesn't exist)
+        await get().updateDailyLog(date, {
+          proteinGrams: totalProtein,
+          fruitsVeggies: totalFruitsVeggies
+        });
+        
+        // Update local state to ensure immediate UI updates
+        const existingLogIndex = get().dailyLogs.findIndex(log => log.date === date);
+        if (existingLogIndex >= 0) {
+          // Update existing log
+          set((state) => ({
+            dailyLogs: state.dailyLogs.map(log => 
+              log.date === date 
+                ? { 
+                    ...log, 
+                    proteinGrams: totalProtein, 
+                    fruitsVeggies: totalFruitsVeggies,
+                    meals: mealsForDate
+                  }
+                : log
+            )
+          }));
+        } else {
+          // Create new daily log in local state
+          const newDailyLog = {
+            id: `temp-${date}-${Date.now()}`, // Temporary ID
+            date,
+            proteinGrams: totalProtein,
+            fruitsVeggies: totalFruitsVeggies,
+            waterOz: 0,
+            steps: 0,
+            meals: mealsForDate,
+            sideEffects: []
+          };
+          set((state) => ({
+            dailyLogs: [...state.dailyLogs, newDailyLog]
+          }));
+        }
+      },
+      refreshAllDailyLogsFromMeals: async () => {
+        const user = useUserStore.getState().user;
+        if (!user?.id) return;
+        
+        // Get all unique dates from meals
+        const mealDates = Array.from(new Set(get().meals.map(meal => meal.date)));
+        console.log('Refreshing daily logs for meal dates:', mealDates);
+        
+        // Update daily logs for each date that has meals
+        for (const date of mealDates) {
+          await get().updateDailyLogFromMeals(date);
+        }
+        
+        // Fetch updated daily logs from database to ensure consistency
+        await get().fetchDailyLogs();
       },
       
       // Fetch methods
@@ -748,18 +868,27 @@ export const useHealthStore = create<HealthState>()(
       
       // Calculations
       getWeeklyScore: (startDate, endDate) => {
+        console.log('getWeeklyScore called with:', startDate, 'to', endDate);
         const relevantLogs = get().dailyLogs.filter(log => {
           return log.date >= startDate && log.date <= endDate;
         });
         
+        console.log('getWeeklyScore: Found', relevantLogs.length, 'relevant logs');
+        relevantLogs.forEach(log => {
+          console.log(`getWeeklyScore log ${log.date}: protein=${log.proteinGrams || 0}, fruitsVeggies=${log.fruitsVeggies || 0}, steps=${log.steps || 0}`);
+        });
+        
         if (relevantLogs.length === 0) {
+          console.log('getWeeklyScore: No relevant logs, returning zeros');
           return { fruitsVeggies: 0, protein: 0, steps: 0, overall: 0 };
         }
         
         // Calculate averages
-        const fruitsVeggiesTotal = relevantLogs.reduce((sum, log) => sum + log.fruitsVeggies, 0);
-        const proteinTotal = relevantLogs.reduce((sum, log) => sum + log.proteinGrams, 0);
-        const stepsTotal = relevantLogs.reduce((sum, log) => sum + log.steps, 0);
+        const fruitsVeggiesTotal = relevantLogs.reduce((sum, log) => sum + (log.fruitsVeggies || 0), 0);
+        const proteinTotal = relevantLogs.reduce((sum, log) => sum + (log.proteinGrams || 0), 0);
+        const stepsTotal = relevantLogs.reduce((sum, log) => sum + (log.steps || 0), 0);
+        
+        console.log('getWeeklyScore totals:', { fruitsVeggiesTotal, proteinTotal, stepsTotal });
         
         // Calculate scores (percentage of target)
         const fruitsVeggiesScore = Math.min(100, (fruitsVeggiesTotal / (5 * relevantLogs.length)) * 100);
@@ -769,12 +898,15 @@ export const useHealthStore = create<HealthState>()(
         // Overall score is average of the three
         const overall = Math.round((fruitsVeggiesScore + proteinScore + stepsScore) / 3);
         
-        return {
+        const result = {
           fruitsVeggies: Math.round(fruitsVeggiesScore),
           protein: Math.round(proteinScore),
           steps: Math.round(stepsScore),
           overall
         };
+        
+        console.log('getWeeklyScore result:', result);
+        return result;
       },
       
       getWeightLoss: () => {
