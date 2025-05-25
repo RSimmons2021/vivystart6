@@ -883,17 +883,26 @@ export const useHealthStore = create<HealthState>()(
           return { fruitsVeggies: 0, protein: 0, steps: 0, overall: 0 };
         }
         
-        // Calculate averages
+        // Calculate weekly totals
         const fruitsVeggiesTotal = relevantLogs.reduce((sum, log) => sum + (log.fruitsVeggies || 0), 0);
         const proteinTotal = relevantLogs.reduce((sum, log) => sum + (log.proteinGrams || 0), 0);
         const stepsTotal = relevantLogs.reduce((sum, log) => sum + (log.steps || 0), 0);
         
         console.log('getWeeklyScore totals:', { fruitsVeggiesTotal, proteinTotal, stepsTotal });
         
-        // Calculate scores (percentage of target)
-        const fruitsVeggiesScore = Math.min(100, (fruitsVeggiesTotal / (5 * relevantLogs.length)) * 100);
-        const proteinScore = Math.min(100, (proteinTotal / (100 * relevantLogs.length)) * 100);
-        const stepsScore = Math.min(100, (stepsTotal / (10000 * relevantLogs.length)) * 100);
+        // Calculate weekly targets (7 days):
+        // - Fruits & Veggies: 4.5 servings/day × 7 days = 31.5 servings/week
+        // - Protein: 80g/day × 7 days = 560g/week
+        // - Steps: 8,000 steps/day × 7 days = 56,000 steps/week
+        
+        const weeklyFruitsVeggiesTarget = 4.5 * 7; // 31.5 servings/week
+        const weeklyProteinTarget = 80 * 7; // 560g/week
+        const weeklyStepsTarget = 8000 * 7; // 56,000 steps/week
+        
+        // Calculate scores as percentage of weekly targets
+        const fruitsVeggiesScore = Math.min(100, (fruitsVeggiesTotal / weeklyFruitsVeggiesTarget) * 100);
+        const proteinScore = Math.min(100, (proteinTotal / weeklyProteinTarget) * 100);
+        const stepsScore = Math.min(100, (stepsTotal / weeklyStepsTarget) * 100);
         
         // Overall score is average of the three
         const overall = Math.round((fruitsVeggiesScore + proteinScore + stepsScore) / 3);
@@ -906,6 +915,11 @@ export const useHealthStore = create<HealthState>()(
         };
         
         console.log('getWeeklyScore result:', result);
+        console.log('Weekly targets:', { 
+          fruitsVeggies: weeklyFruitsVeggiesTarget, 
+          protein: weeklyProteinTarget, 
+          steps: weeklyStepsTarget 
+        });
         return result;
       },
       
